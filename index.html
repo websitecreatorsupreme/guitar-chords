@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bar chords — progression</title>
+<style>
+  :root{
+    --bg:#f6f1e9; --ink:#241c15; --muted:#7a6e61; --chip:#ebe3d6; --chip-hover:#e0d5c3;
+    --accent:#e8791c; --accent-ink:#fff; --card:#fff; --line:#1b1b1b;
+    --yellow:#f7c244; --orange:#ee8a2e; --dot-stroke:#c4691a; --red:#9b1c1c;
+    --root-bg:#fde3c8; --root-ink:#8a3f00;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#17130f; --ink:#f3ece1; --muted:#a39685; --chip:#2a231c; --chip-hover:#372e24;
+      --root-bg:#4a2c10; --root-ink:#ffd2a1;
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.45; -webkit-font-smoothing:antialiased;
+  }
+  main{max-width:560px; margin:0 auto; padding:28px 16px 48px}
+  h1{font-size:1.5rem; margin:0 0 20px; letter-spacing:-.01em}
+  .label{font-size:.72rem; text-transform:uppercase; letter-spacing:.09em; color:var(--muted); margin:0 0 8px}
+
+  .chords{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:20px}
+  .chords button{
+    font:inherit; font-size:1.6rem; font-weight:700; padding:14px 0; border:0; border-radius:14px;
+    background:var(--chip); color:var(--ink); cursor:pointer; transition:background .15s, transform .1s;
+  }
+  .chords button:hover{background:var(--chip-hover)}
+  .chords button:active{transform:scale(.97)}
+  .chords button[aria-pressed="true"]{background:var(--accent); color:var(--accent-ink)}
+
+  .levels{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:22px}
+  .levels button{
+    font:inherit; font-size:.95rem; font-weight:600; padding:9px 16px; border:0; border-radius:999px;
+    background:var(--chip); color:var(--ink); cursor:pointer; transition:background .15s;
+  }
+  .levels button:hover{background:var(--chip-hover)}
+  .levels button[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
+  button:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
+
+  .card{background:var(--card); border-radius:18px; padding:14px 8px 6px; box-shadow:0 2px 14px rgba(0,0,0,.08)}
+  .card h2{margin:0; text-align:center; font-size:1.7rem; font-weight:500; color:#111; letter-spacing:-.01em}
+  .card svg{display:block; width:100%; max-width:380px; height:auto; margin:0 auto}
+
+  .info{margin-top:18px; display:grid; gap:16px}
+  .tip{margin:0; font-size:1rem}
+  .tab{display:inline-grid; grid-template-columns:repeat(6,2.4rem); text-align:center; font-family:ui-monospace,Menlo,monospace}
+  .tab span{padding:2px 0}
+  .tab .names{color:var(--muted); font-size:.8rem}
+  .tab .fr{font-size:1.1rem; font-weight:700}
+  .notes{display:flex; gap:6px; flex-wrap:wrap; align-items:center}
+  .chip{padding:3px 11px; border-radius:999px; background:var(--chip); font-weight:600; font-size:.9rem}
+  .chip.root{background:var(--root-bg); color:var(--root-ink)}
+  .legend{display:flex; flex-wrap:wrap; gap:6px 16px; font-size:.85rem; color:var(--muted); margin:0; padding:0; list-style:none}
+  .legend li{display:flex; align-items:center; gap:6px}
+  .legend svg{width:22px; height:22px; flex:none}
+  .hint{font-size:.8rem; color:var(--muted); margin:0}
+</style>
+</head>
+<body>
+<main>
+  <h1>Bar chords</h1>
+
+  <div class="chords" id="chords" role="group" aria-label="Accord"></div>
+
+  <p class="label">Niveau</p>
+  <div class="levels" id="levels" role="group" aria-label="Niveau de difficulté"></div>
+
+  <section class="card" aria-live="polite">
+    <h2 id="title"></h2>
+    <svg id="diagram" viewBox="0 0 360 400" role="img"></svg>
+  </section>
+
+  <div class="info">
+    <p class="tip" id="tip"></p>
+    <div><p class="label">Frettes (E A D G B e)</p><div class="tab" id="tab"></div></div>
+    <div><p class="label">Notes jouées</p><div class="notes" id="notes"></div></div>
+    <ul class="legend" id="legend"></ul>
+    <p class="hint">Astuce : les flèches ← → changent de niveau.</p>
+  </div>
+</main>
+
+<script>
+/* ============================================================
+   DONNÉES — modifiables à la main.
+   Cordes dans l'ordre 0..5 = E A D G B e (grave → aiguë).
+   frets  : une valeur par corde ('x' = non jouée, 0 = à vide).
+   fingers: [case, corde début, corde fin, doigt] ; début≠fin = barré / mini-barré.
+            doigt = '1'..'4' ou 'T' (pouce).
+   base   : première case affichée sur le manche.
+   ============================================================ */
+const x = 'x';
+const CHORDS = [
+  { id:'F', label:'F', root:'F', base:1, levels:[
+    { id:'l1', name:'Level 1', frets:[x,x,3,2,1,x],
+      fingers:[[3,2,2,'3'],[2,3,3,'2'],[1,4,4,'1']],
+      tip:'Trois cordes seulement (D, G, B), un doigt par corde, aucun barré. Ne gratte pas les autres cordes.' },
+    { id:'l2', name:'Level 2', frets:[x,x,3,2,1,1],
+      fingers:[[3,2,2,'3'],[2,3,3,'2'],[1,4,5,'1']],
+      tip:'L’index se couche sur les deux cordes aiguës (B et e) : c’est un mini-barré.' },
+    { id:'l3', name:'Level 3', frets:[x,3,3,2,1,1],
+      fingers:[[3,1,1,'3'],[3,2,2,'4'],[2,3,3,'2'],[1,4,5,'1']],
+      tip:'On ajoute la corde de A (case 3). Annulaire et auriculaire côte à côte, l’index reste en mini-barré.' },
+    { id:'l4', name:'Level 4', frets:[1,0,3,2,1,1],
+      fingers:[[1,0,0,'T'],[3,2,2,'3'],[2,3,3,'2'],[1,4,5,'1']],
+      tip:'Le pouce passe par-dessus le manche pour jouer le E grave à la case 1. La corde de A reste à vide.' },
+    { id:'bar', name:'Bar chord', frets:[1,3,3,2,1,1],
+      fingers:[[1,0,5,'1'],[3,1,1,'3'],[3,2,2,'4'],[2,3,3,'2']],
+      tip:'L’index barre les 6 cordes à la case 1. C’est la forme de E majeur, décalée d’une case.' }
+  ]},
+  { id:'Fs', label:'F#', root:'F#', base:2, levels:[
+    { id:'l1', name:'Level 1', frets:[x,x,4,3,2,x],
+      fingers:[[4,2,2,'3'],[3,3,3,'2'],[2,4,4,'1']],
+      tip:'Même forme que le F, une case plus haut. Trois cordes (D, G, B), un doigt par corde.' },
+    { id:'l2', name:'Level 2', frets:[x,x,4,3,2,2],
+      fingers:[[4,2,2,'3'],[3,3,3,'2'],[2,4,5,'1']],
+      tip:'Mini-barré de l’index sur B et e, case 2.' },
+    { id:'l3', name:'Level 3', frets:[x,4,4,3,2,2],
+      fingers:[[4,1,1,'3'],[4,2,2,'4'],[3,3,3,'2'],[2,4,5,'1']],
+      tip:'On ajoute la corde de A (case 4). Annulaire et auriculaire côte à côte.' },
+    { id:'l4', name:'Level 4', frets:[2,x,4,3,2,2],
+      fingers:[[2,0,0,'T'],[4,2,2,'3'],[3,3,3,'2'],[2,4,5,'1']],
+      tip:'Pouce sur le E grave (case 2). Ici le A à vide sonnerait faux : on étouffe la corde de A en l’effleurant avec le pouce.' },
+    { id:'bar', name:'Bar chord', frets:[2,4,4,3,2,2],
+      fingers:[[2,0,5,'1'],[4,1,1,'3'],[4,2,2,'4'],[3,3,3,'2']],
+      tip:'L’index barre les 6 cordes à la case 2 : forme de E majeur décalée de deux cases.' }
+  ]},
+  { id:'B', label:'B', root:'B', base:2, levels:[
+    { id:'l1', name:'Level 1', frets:[x,x,4,4,4,x],
+      fingers:[[4,2,4,'3']],
+      tip:'Un seul doigt : l’annulaire posé à plat sur D, G et B (case 4). Joue uniquement ces 3 cordes.' },
+    { id:'l2', name:'Level 2', frets:[x,x,4,4,4,2],
+      fingers:[[4,2,4,'3'],[2,5,5,'1']],
+      tip:'On ajoute l’index sur la corde e (case 2).' },
+    { id:'l3', name:'Level 3', frets:[x,2,4,4,4,x],
+      fingers:[[2,1,1,'1'],[4,2,4,'3']],
+      tip:'L’index passe sur la corde de A (case 2) : tu as maintenant la fondamentale B dans les graves. Étouffe E et e.' },
+    { id:'bar', name:'Bar chord', frets:[x,2,4,4,4,2],
+      fingers:[[2,1,5,'1'],[4,2,4,'3']],
+      tip:'L’index barre de A à e à la case 2, l’annulaire reste à plat sur D, G, B (case 4). Le E grave n’est pas joué.' }
+  ]},
+  { id:'Bm', label:'Bm', root:'B', base:2, levels:[
+    { id:'l1', name:'Level 1', frets:[x,x,0,4,3,2],
+      fingers:[[4,3,3,'3'],[3,4,4,'2'],[2,5,5,'1']],
+      tip:'Version la plus facile : D à vide + 3 cordes aiguës. Aucun barré. La corde de A reste muette.' },
+    { id:'l2', name:'Level 2', frets:[x,x,4,4,3,2],
+      fingers:[[4,2,3,'3'],[3,4,4,'2'],[2,5,5,'1']],
+      tip:'On remplace le D à vide par la case 4 : l’annulaire se couche sur D et G.' },
+    { id:'l3', name:'Level 3', frets:[x,2,4,4,3,x],
+      fingers:[[2,1,1,'1'],[4,2,2,'3'],[4,3,3,'4'],[3,4,4,'2']],
+      tip:'La forme complète du Bm barré, mais sans la corde e : index sur A (case 2), majeur B3, annulaire D4, auriculaire G4.' },
+    { id:'bar', name:'Bar chord', frets:[x,2,4,4,3,2],
+      fingers:[[2,1,5,'1'],[4,2,2,'3'],[4,3,3,'4'],[3,4,4,'2']],
+      tip:'L’index barre de A à e à la case 2, puis majeur (B3), annulaire (D4), auriculaire (G4). Le E grave n’est pas joué.' }
+  ]}
+];
+
+/* ============================================================
+   Utilitaires
+   ============================================================ */
+const STRING_NAMES = ['E','A','D','G','B','e'];
+const OPEN_SEMITONE = [4,9,2,7,11,4];               // C = 0
+const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const LEVEL_ORDER = ['l1','l2','l3','l4','bar'];
+const $ = id => document.getElementById(id);
+
+function notesOf(level){
+  const out = [];
+  level.frets.forEach((f,i) => {
+    if (f === x) return;
+    const n = NOTE_NAMES[(OPEN_SEMITONE[i] + f) % 12];
+    if (!out.includes(n)) out.push(n);
+  });
+  return out;
+}
+
+// Contrôle de cohérence (console) : chaque corde jouée et non à vide doit avoir un doigt.
+function checkData(){
+  CHORDS.forEach(c => c.levels.forEach(l => {
+    l.frets.forEach((f,i) => {
+      if (f === x || f === 0) return;
+      const ok = l.fingers.some(([fr,a,b]) => fr === f && i >= a && i <= b);
+      if (!ok) console.warn(`${c.label} ${l.name}: corde ${STRING_NAMES[i]} case ${f} sans doigt`);
+    });
+    l.fingers.forEach(([fr,a,b]) => {
+      for (let i=a;i<=b;i++) if (l.frets[i] !== fr)
+        console.warn(`${c.label} ${l.name}: doigt case ${fr} sur corde ${STRING_NAMES[i]} incohérent`);
+    });
+  }));
+}
+
+/* ============================================================
+   Rendu du diagramme (SVG)
+   ============================================================ */
+const LEFT=78, GAP=44, TOP=84, ROW=62, ROWS=4, R=19;
+const sx = i => LEFT + i*GAP;
+const dotFill = lab => (lab==='1' || lab==='3') ? 'var(--yellow)' : 'var(--orange)';
+
+function drawDiagram(chord, level){
+  const base = chord.base;
+  const bottom = TOP + ROWS*ROW;
+  let s = '';
+
+  // numéros de cases à gauche
+  for (let r=0;r<ROWS;r++)
+    s += `<text x="34" y="${TOP+(r+.5)*ROW+8}" text-anchor="middle" font-size="22" fill="var(--muted)">${base+r}</text>`;
+
+  // cases (traits horizontaux)
+  for (let r=0;r<=ROWS;r++){
+    const thick = (r===0 && base===1);
+    s += `<line x1="${sx(0)-1}" x2="${sx(5)+1}" y1="${TOP+r*ROW}" y2="${TOP+r*ROW}" stroke="var(--line)" stroke-width="${thick?9:2.5}" stroke-linecap="square" ${thick?'':'class="fretline"'}/>`;
+  }
+  // cordes
+  for (let i=0;i<6;i++)
+    s += `<line x1="${sx(i)}" x2="${sx(i)}" y1="${TOP}" y2="${bottom}" stroke="var(--line)" stroke-width="2.5"/>`;
+
+  // noms des cordes
+  STRING_NAMES.forEach((n,i) => {
+    s += `<text x="${sx(i)}" y="${bottom+34}" text-anchor="middle" font-size="22" fill="var(--muted)">${n}</text>`;
+  });
+
+  // cordes muettes / à vide (au-dessus du manche)
+  const my = TOP - 34;
+  level.frets.forEach((f,i) => {
+    if (f === x){
+      s += `<path d="M${sx(i)-9} ${my-9} L${sx(i)+9} ${my+9} M${sx(i)+9} ${my-9} L${sx(i)-9} ${my+9}" stroke="var(--red)" stroke-width="3.5" stroke-linecap="round" fill="none"/>`;
+    } else if (f === 0){
+      s += `<circle cx="${sx(i)}" cy="${my}" r="14" fill="var(--orange)" stroke="var(--dot-stroke)" stroke-width="2"/>`;
+    }
+  });
+
+  // doigts (barrés d'abord pour que les doigts simples passent par-dessus)
+  const fingers = [...level.fingers].sort((a,b) => (b[2]-b[1]) - (a[2]-a[1]));
+  fingers.forEach(([fret,a,b,lab], k) => {
+    const cy = TOP + (fret - base + .5)*ROW;
+    const x1 = sx(a), x2 = sx(b);
+    const fill = dotFill(lab);
+    const shape = a===b
+      ? `<circle cx="${x1}" cy="${cy}" r="${R}" fill="${fill}" stroke="var(--dot-stroke)" stroke-width="2"/>`
+      : `<rect x="${x1-R}" y="${cy-R}" width="${x2-x1+2*R}" height="${2*R}" rx="${R}" fill="${fill}" stroke="var(--dot-stroke)" stroke-width="2"/>`;
+    s += `<g>${shape}
+      <text x="${(x1+x2)/2}" y="${cy+8}" text-anchor="middle" font-size="22" font-weight="700" fill="#2b1a08">${lab}</text></g>`;
+  });
+
+  $('diagram').innerHTML = s;
+}
+
+/* ============================================================
+   UI
+   ============================================================ */
+const state = { chord:'F', level:'l1' };
+
+function chordById(id){ return CHORDS.find(c => c.id === id) || CHORDS[0]; }
+
+function nearestLevel(chord, wanted){
+  if (chord.levels.some(l => l.id === wanted)) return wanted;
+  const w = LEVEL_ORDER.indexOf(wanted);
+  return [...chord.levels].sort((a,b) => {
+    const da = Math.abs(LEVEL_ORDER.indexOf(a.id)-w), db = Math.abs(LEVEL_ORDER.indexOf(b.id)-w);
+    return da - db || LEVEL_ORDER.indexOf(a.id) - LEVEL_ORDER.indexOf(b.id);
+  })[0].id;
+}
+
+function render(){
+  const chord = chordById(state.chord);
+  state.chord = chord.id;
+  state.level = nearestLevel(chord, state.level);
+  const level = chord.levels.find(l => l.id === state.level);
+
+  // boutons
+  $('chords').innerHTML = CHORDS.map(c =>
+    `<button type="button" data-chord="${c.id}" aria-pressed="${c.id===chord.id}">${c.label}</button>`).join('');
+  $('levels').innerHTML = chord.levels.map(l =>
+    `<button type="button" data-level="${l.id}" aria-pressed="${l.id===level.id}">${l.name}</button>`).join('');
+
+  // diagramme
+  $('title').textContent = `${chord.label} ${level.name}`;
+  $('diagram').setAttribute('aria-label', `Diagramme de ${chord.label}, ${level.name}`);
+  drawDiagram(chord, level);
+
+  // infos
+  $('tip').textContent = level.tip;
+  $('tab').innerHTML =
+    STRING_NAMES.map(n => `<span class="names">${n}</span>`).join('') +
+    level.frets.map(f => `<span class="fr">${f}</span>`).join('');
+  $('notes').innerHTML = notesOf(level).map(n =>
+    `<span class="chip${n===chord.root?' root':''}">${n}</span>`).join('');
+
+  try { history.replaceState(null, '', `#${chord.id}-${level.id}`); } catch(e){}
+}
+
+const dotIcon = (fill, txt) =>
+  `<svg viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="${fill}" stroke="var(--dot-stroke)" stroke-width="1.5"/>` +
+  (txt ? `<text x="11" y="15.5" text-anchor="middle" font-size="12" font-weight="700" fill="#2b1a08">${txt}</text>` : '') + `</svg>`;
+$('legend').innerHTML = [
+  [dotIcon('var(--yellow)','1'), 'index'],
+  [dotIcon('var(--orange)','2'), 'majeur'],
+  [dotIcon('var(--yellow)','3'), 'annulaire'],
+  [dotIcon('var(--orange)','4'), 'auriculaire'],
+  [dotIcon('var(--orange)','T'), 'pouce'],
+  [dotIcon('var(--orange)',''), 'corde à vide'],
+  [`<svg viewBox="0 0 22 22"><path d="M5 5L17 17M17 5L5 17" stroke="var(--red)" stroke-width="3" stroke-linecap="round"/></svg>`, 'non jouée']
+].map(([i,t]) => `<li>${i}${t}</li>`).join('');
+
+$('chords').addEventListener('click', e => {
+  const b = e.target.closest('button[data-chord]'); if (!b) return;
+  state.chord = b.dataset.chord; render();
+});
+$('levels').addEventListener('click', e => {
+  const b = e.target.closest('button[data-level]'); if (!b) return;
+  state.level = b.dataset.level; render();
+});
+document.addEventListener('keydown', e => {
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  const chord = chordById(state.chord);
+  const i = chord.levels.findIndex(l => l.id === state.level);
+  const j = Math.max(0, Math.min(chord.levels.length-1, i + (e.key==='ArrowRight' ? 1 : -1)));
+  if (j !== i){ state.level = chord.levels[j].id; render(); }
+});
+
+// état initial depuis l'URL (#F-l3)
+(function init(){
+  const m = location.hash.slice(1).match(/^([A-Za-z]+)-(l\d|bar)$/);
+  if (m){ state.chord = m[1]; state.level = m[2]; }
+  checkData();
+  render();
+})();
+</script>
+</body>
+</html>
