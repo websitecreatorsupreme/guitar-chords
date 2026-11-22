@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Bar chords — progression</title>
+<title>Guitar chords</title>
 <style>
   :root{
     --bg:#f6f1e9; --ink:#241c15; --muted:#7a6e61; --chip:#ebe3d6; --chip-hover:#e0d5c3;
@@ -18,6 +18,7 @@
     }
   }
   *{box-sizing:border-box}
+  [hidden]{display:none !important}
   html,body{margin:0}
   body{
     background:var(--bg); color:var(--ink);
@@ -28,15 +29,26 @@
   h1{font-size:1.5rem; margin:0 0 20px; letter-spacing:-.01em}
   .label{font-size:.72rem; text-transform:uppercase; letter-spacing:.09em; color:var(--muted); margin:0 0 8px}
 
-  .chords{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:20px}
-  .chords button{
-    font:inherit; font-size:1.6rem; font-weight:700; padding:14px 0; border:0; border-radius:14px;
+  /* 1. notes */
+  .roots{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:16px}
+  .roots button{
+    font:inherit; font-size:1.5rem; font-weight:700; padding:12px 0; border:0; border-radius:14px;
     background:var(--chip); color:var(--ink); cursor:pointer; transition:background .15s, transform .1s;
   }
-  .chords button:hover{background:var(--chip-hover)}
-  .chords button:active{transform:scale(.97)}
-  .chords button[aria-pressed="true"]{background:var(--accent); color:var(--accent-ink)}
+  .roots button:hover{background:var(--chip-hover)}
+  .roots button:active{transform:scale(.97)}
+  .roots button[aria-pressed="true"]{background:var(--accent); color:var(--accent-ink)}
 
+  /* 2. accords de la note */
+  .types{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:18px}
+  .types button{
+    font:inherit; font-size:.95rem; font-weight:600; padding:8px 15px; border:2px solid transparent; border-radius:999px;
+    background:var(--chip); color:var(--ink); cursor:pointer; transition:background .15s;
+  }
+  .types button:hover{background:var(--chip-hover)}
+  .types button[aria-pressed="true"]{background:var(--root-bg); color:var(--root-ink); border-color:var(--accent)}
+
+  /* 3. niveaux */
   .levels{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:22px}
   .levels button{
     font:inherit; font-size:.95rem; font-weight:600; padding:9px 16px; border:0; border-radius:999px;
@@ -67,12 +79,15 @@
 </head>
 <body>
 <main>
-  <h1>Bar chords</h1>
+  <h1>Guitar chords</h1>
 
-  <div class="chords" id="chords" role="group" aria-label="Accord"></div>
+  <div class="roots" id="roots" role="group" aria-label="Note"></div>
+  <div class="types" id="types" role="group" aria-label="Accord"></div>
 
-  <p class="label">Niveau</p>
-  <div class="levels" id="levels" role="group" aria-label="Niveau de difficulté"></div>
+  <div id="levelsBox">
+    <p class="label">Niveau</p>
+    <div class="levels" id="levels" role="group" aria-label="Niveau de difficulté"></div>
+  </div>
 
   <section class="card" aria-live="polite">
     <h2 id="title"></h2>
@@ -84,7 +99,7 @@
     <div><p class="label">Frettes (E A D G B e)</p><div class="tab" id="tab"></div></div>
     <div><p class="label">Notes jouées</p><div class="notes" id="notes"></div></div>
     <ul class="legend" id="legend"></ul>
-    <p class="hint">Astuce : les flèches ← → changent de niveau.</p>
+    <p class="hint" id="hint">Astuce : les flèches ← → changent de niveau.</p>
   </div>
 </main>
 
@@ -92,14 +107,98 @@
 /* ============================================================
    DONNÉES — modifiables à la main.
    Cordes dans l'ordre 0..5 = E A D G B e (grave → aiguë).
-   frets  : une valeur par corde ('x' = non jouée, 0 = à vide).
-   fingers: [case, corde début, corde fin, doigt] ; début≠fin = barré / mini-barré.
-            doigt = '1'..'4' ou 'T' (pouce).
-   base   : première case affichée sur le manche.
+   Un accord = { id, label, root (note), type, base, levels:[…] }
+     - type : sert à garder « majeur » / « mineur » quand on change de note.
+     - base : première case affichée sur le manche.
+   Un niveau = { id, name, frets, fingers, tip }
+     - frets  : une valeur par corde ('x' = non jouée, 0 = à vide).
+     - fingers: [case, corde début, corde fin, doigt] ; début≠fin = barré / mini-barré.
+                doigt = '1'..'4' ou 'T' (pouce).
+   Un accord avec un seul niveau n'affiche pas les boutons « Level ».
    ============================================================ */
 const x = 'x';
+const single = (frets, fingers, tip) => [{ id:'std', name:'', frets, fingers, tip }];
+
 const CHORDS = [
-  { id:'F', label:'F', root:'F', base:1, levels:[
+  /* ---------- A ---------- */
+  { id:'A', label:'A', root:'A', type:'maj', base:1, levels: single(
+      [x,0,2,2,2,0], [[2,2,2,'1'],[2,3,3,'2'],[2,4,4,'3']],
+      'Trois doigts côte à côte à la case 2 (D, G, B). Le E grave n’est pas joué.') },
+  { id:'Am', label:'Am', root:'A', type:'min', base:1, levels: single(
+      [x,0,2,2,1,0], [[1,4,4,'1'],[2,2,2,'2'],[2,3,3,'3']],
+      'Index sur B (case 1), majeur sur D et annulaire sur G (case 2). Le E grave n’est pas joué.') },
+  { id:'A7sus4a', label:'A7sus4 (1)', root:'A', type:'7sus4', base:1, levels: single(
+      [x,0,2,0,3,3], [[2,2,2,'1'],[3,4,4,'3'],[3,5,5,'4']],
+      'A et G à vide. Index sur D (case 2), annulaire et auriculaire sur B et e (case 3). Le E grave n’est pas joué.') },
+  { id:'A7sus4b', label:'A7sus4 (2)', root:'A', type:'7sus4', base:1, levels: single(
+      [x,0,2,2,3,3], [[2,2,2,'1'],[2,3,3,'2'],[3,4,4,'3'],[3,5,5,'4']],
+      'Variante avec G tenu à la case 2 : index sur D, majeur sur G, annulaire et auriculaire sur B et e (case 3). Le E grave n’est pas joué.') },
+
+  /* ---------- B ---------- */
+  { id:'B', label:'B', root:'B', type:'maj', base:2, levels:[
+    { id:'l1', name:'Level 1', frets:[x,x,4,4,4,x],
+      fingers:[[4,2,4,'3']],
+      tip:'Un seul doigt : l’annulaire posé à plat sur D, G et B (case 4). Joue uniquement ces 3 cordes.' },
+    { id:'l2', name:'Level 2', frets:[x,x,4,4,4,2],
+      fingers:[[4,2,4,'3'],[2,5,5,'1']],
+      tip:'On ajoute l’index sur la corde e (case 2).' },
+    { id:'l3', name:'Level 3', frets:[x,2,4,4,4,x],
+      fingers:[[2,1,1,'1'],[4,2,4,'3']],
+      tip:'L’index passe sur la corde de A (case 2) : tu as maintenant la fondamentale B dans les graves. Étouffe E et e.' },
+    { id:'bar', name:'Bar chord', frets:[x,2,4,4,4,2],
+      fingers:[[2,1,5,'1'],[4,2,4,'3']],
+      tip:'L’index barre de A à e à la case 2, l’annulaire reste à plat sur D, G, B (case 4). Le E grave n’est pas joué.' }
+  ]},
+  { id:'Bm', label:'Bm', root:'B', type:'min', base:2, levels:[
+    { id:'l1', name:'Level 1', frets:[x,x,0,4,3,2],
+      fingers:[[4,3,3,'3'],[3,4,4,'2'],[2,5,5,'1']],
+      tip:'Version la plus facile : D à vide + 3 cordes aiguës. Aucun barré. La corde de A reste muette.' },
+    { id:'l2', name:'Level 2', frets:[x,x,4,4,3,2],
+      fingers:[[4,2,3,'3'],[3,4,4,'2'],[2,5,5,'1']],
+      tip:'On remplace le D à vide par la case 4 : l’annulaire se couche sur D et G.' },
+    { id:'l3', name:'Level 3', frets:[x,2,4,4,3,x],
+      fingers:[[2,1,1,'1'],[4,2,2,'3'],[4,3,3,'4'],[3,4,4,'2']],
+      tip:'La forme complète du Bm barré, mais sans la corde e : index sur A (case 2), majeur B3, annulaire D4, auriculaire G4.' },
+    { id:'bar', name:'Bar chord', frets:[x,2,4,4,3,2],
+      fingers:[[2,1,5,'1'],[4,2,2,'3'],[4,3,3,'4'],[3,4,4,'2']],
+      tip:'L’index barre de A à e à la case 2, puis majeur (B3), annulaire (D4), auriculaire (G4). Le E grave n’est pas joué.' }
+  ]},
+
+  /* ---------- C ---------- */
+  { id:'C', label:'C', root:'C', type:'maj', base:1, levels: single(
+      [x,3,2,0,1,0], [[3,1,1,'3'],[2,2,2,'2'],[1,4,4,'1']],
+      'Annulaire sur A (case 3), majeur sur D (case 2), index sur B (case 1). Le E grave n’est pas joué.') },
+  { id:'Cadd9', label:'Cadd9', root:'C', type:'add9', base:1, levels: single(
+      [x,3,2,0,3,3], [[3,1,1,'2'],[2,2,2,'1'],[3,4,4,'3'],[3,5,5,'4']],
+      'Majeur sur A (case 3), index sur D (case 2), annulaire et auriculaire sur B et e (case 3). G à vide. Le E grave n’est pas joué.') },
+
+  /* ---------- D ---------- */
+  { id:'D', label:'D', root:'D', type:'maj', base:1, levels: single(
+      [x,x,0,2,3,2], [[2,3,3,'1'],[3,4,4,'3'],[2,5,5,'2']],
+      'Un triangle de trois doigts : index sur G, majeur sur e (case 2), annulaire sur B (case 3). Ne joue pas les deux cordes graves.') },
+  { id:'Dm', label:'Dm', root:'D', type:'min', base:1, levels: single(
+      [x,x,0,2,3,1], [[2,3,3,'2'],[3,4,4,'3'],[1,5,5,'1']],
+      'Même triangle que D, mais e à la case 1 : index sur e, majeur sur G, annulaire sur B. Ne joue pas les deux cordes graves.') },
+  { id:'Dsus4', label:'Dsus4', root:'D', type:'sus4', base:1, levels: single(
+      [x,x,0,2,3,3], [[2,3,3,'1'],[3,4,4,'3'],[3,5,5,'4']],
+      'D à vide, index sur G (case 2), annulaire et auriculaire sur B et e (case 3). Ne joue pas les deux cordes graves.') },
+  { id:'Dadd11', label:'Dadd11/F#', root:'D', type:'add11', base:1, levels: single(
+      [2,x,0,2,3,3], [[2,0,0,'1'],[2,3,3,'2'],[3,4,4,'3'],[3,5,5,'4']],
+      'Index sur le E grave (case 2) : la basse est un F#. Majeur sur G (case 2), annulaire et auriculaire sur B et e (case 3). La corde de A est muette.') },
+
+  /* ---------- E ---------- */
+  { id:'E', label:'E', root:'E', type:'maj', base:1, levels: single(
+      [0,2,2,1,0,0], [[2,1,1,'2'],[2,2,2,'3'],[1,3,3,'1']],
+      'Majeur sur A et annulaire sur D (case 2), index sur G (case 1). Les 6 cordes sonnent.') },
+  { id:'Em', label:'Em', root:'E', type:'min', base:1, levels: single(
+      [0,2,2,0,0,0], [[2,1,1,'2'],[2,2,2,'3']],
+      'Majeur sur A et annulaire sur D (case 2). Les 6 cordes sonnent.') },
+  { id:'Em7', label:'Em7', root:'E', type:'m7', base:1, levels: single(
+      [0,2,2,0,3,3], [[2,1,1,'1'],[2,2,2,'2'],[3,4,4,'3'],[3,5,5,'4']],
+      'Index sur A et majeur sur D (case 2), annulaire et auriculaire sur B et e (case 3). E et G à vide. Les 6 cordes sonnent.') },
+
+  /* ---------- F ---------- */
+  { id:'F', label:'F', root:'F', type:'maj', base:1, levels:[
     { id:'l1', name:'Level 1', frets:[x,x,3,2,1,x],
       fingers:[[3,2,2,'3'],[2,3,3,'2'],[1,4,4,'1']],
       tip:'Trois cordes seulement (D, G, B), un doigt par corde, aucun barré. Ne gratte pas les autres cordes.' },
@@ -116,7 +215,12 @@ const CHORDS = [
       fingers:[[1,0,5,'1'],[3,1,1,'3'],[3,2,2,'4'],[2,3,3,'2']],
       tip:'L’index barre les 6 cordes à la case 1. C’est la forme de E majeur, décalée d’une case.' }
   ]},
-  { id:'Fs', label:'F#', root:'F#', base:2, levels:[
+  { id:'F69', label:'F69', root:'F', type:'69', base:1, levels: single(
+      [x,x,3,2,3,3], [[3,2,2,'2'],[2,3,3,'1'],[3,4,4,'3'],[3,5,5,'4']],
+      'Pas de barré : index sur G (case 2), majeur sur D (case 3), annulaire et auriculaire sur B et e (case 3). Ne joue pas les deux cordes graves.') },
+
+  /* ---------- F# ---------- */
+  { id:'Fs', label:'F#', root:'F#', type:'maj', base:2, levels:[
     { id:'l1', name:'Level 1', frets:[x,x,4,3,2,x],
       fingers:[[4,2,2,'3'],[3,3,3,'2'],[2,4,4,'1']],
       tip:'Même forme que le F, une case plus haut. Trois cordes (D, G, B), un doigt par corde.' },
@@ -133,39 +237,20 @@ const CHORDS = [
       fingers:[[2,0,5,'1'],[4,1,1,'3'],[4,2,2,'4'],[3,3,3,'2']],
       tip:'L’index barre les 6 cordes à la case 2 : forme de E majeur décalée de deux cases.' }
   ]},
-  { id:'B', label:'B', root:'B', base:2, levels:[
-    { id:'l1', name:'Level 1', frets:[x,x,4,4,4,x],
-      fingers:[[4,2,4,'3']],
-      tip:'Un seul doigt : l’annulaire posé à plat sur D, G et B (case 4). Joue uniquement ces 3 cordes.' },
-    { id:'l2', name:'Level 2', frets:[x,x,4,4,4,2],
-      fingers:[[4,2,4,'3'],[2,5,5,'1']],
-      tip:'On ajoute l’index sur la corde e (case 2).' },
-    { id:'l3', name:'Level 3', frets:[x,2,4,4,4,x],
-      fingers:[[2,1,1,'1'],[4,2,4,'3']],
-      tip:'L’index passe sur la corde de A (case 2) : tu as maintenant la fondamentale B dans les graves. Étouffe E et e.' },
-    { id:'bar', name:'Bar chord', frets:[x,2,4,4,4,2],
-      fingers:[[2,1,5,'1'],[4,2,4,'3']],
-      tip:'L’index barre de A à e à la case 2, l’annulaire reste à plat sur D, G, B (case 4). Le E grave n’est pas joué.' }
-  ]},
-  { id:'Bm', label:'Bm', root:'B', base:2, levels:[
-    { id:'l1', name:'Level 1', frets:[x,x,0,4,3,2],
-      fingers:[[4,3,3,'3'],[3,4,4,'2'],[2,5,5,'1']],
-      tip:'Version la plus facile : D à vide + 3 cordes aiguës. Aucun barré. La corde de A reste muette.' },
-    { id:'l2', name:'Level 2', frets:[x,x,4,4,3,2],
-      fingers:[[4,2,3,'3'],[3,4,4,'2'],[2,5,5,'1']],
-      tip:'On remplace le D à vide par la case 4 : l’annulaire se couche sur D et G.' },
-    { id:'l3', name:'Level 3', frets:[x,2,4,4,3,x],
-      fingers:[[2,1,1,'1'],[4,2,2,'3'],[4,3,3,'4'],[3,4,4,'2']],
-      tip:'La forme complète du Bm barré, mais sans la corde e : index sur A (case 2), majeur B3, annulaire D4, auriculaire G4.' },
-    { id:'bar', name:'Bar chord', frets:[x,2,4,4,3,2],
-      fingers:[[2,1,5,'1'],[4,2,2,'3'],[4,3,3,'4'],[3,4,4,'2']],
-      tip:'L’index barre de A à e à la case 2, puis majeur (B3), annulaire (D4), auriculaire (G4). Le E grave n’est pas joué.' }
-  ]}
+
+  /* ---------- G ---------- */
+  { id:'G', label:'G', root:'G', type:'maj', base:1, levels: single(
+      [3,2,0,0,3,3], [[3,0,0,'2'],[2,1,1,'1'],[3,4,4,'3'],[3,5,5,'4']],
+      'Majeur sur le E grave (case 3), index sur A (case 2), annulaire et auriculaire sur B et e (case 3). Les 6 cordes sonnent.') },
+  { id:'G5', label:'G5', root:'G', type:'5', base:1, levels: single(
+      [3,x,0,0,3,3], [[3,0,0,'2'],[3,4,4,'3'],[3,5,5,'4']],
+      'Version « power chord » : majeur sur le E grave, annulaire et auriculaire sur B et e (case 3). D et G à vide, la corde de A est étouffée.') }
 ];
 
 /* ============================================================
    Utilitaires
    ============================================================ */
+const ROOTS = ['A','B','C','D','E','F','F#','G'];
 const STRING_NAMES = ['E','A','D','G','B','e'];
 const OPEN_SEMITONE = [4,9,2,7,11,4];               // C = 0
 const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -185,14 +270,15 @@ function notesOf(level){
 // Contrôle de cohérence (console) : chaque corde jouée et non à vide doit avoir un doigt.
 function checkData(){
   CHORDS.forEach(c => c.levels.forEach(l => {
+    const tag = `${c.label} ${l.name}`.trim();
     l.frets.forEach((f,i) => {
       if (f === x || f === 0) return;
       const ok = l.fingers.some(([fr,a,b]) => fr === f && i >= a && i <= b);
-      if (!ok) console.warn(`${c.label} ${l.name}: corde ${STRING_NAMES[i]} case ${f} sans doigt`);
+      if (!ok) console.warn(`${tag}: corde ${STRING_NAMES[i]} case ${f} sans doigt`);
     });
     l.fingers.forEach(([fr,a,b]) => {
       for (let i=a;i<=b;i++) if (l.frets[i] !== fr)
-        console.warn(`${c.label} ${l.name}: doigt case ${fr} sur corde ${STRING_NAMES[i]} incohérent`);
+        console.warn(`${tag}: doigt case ${fr} sur corde ${STRING_NAMES[i]} incohérent`);
     });
   }));
 }
@@ -216,7 +302,7 @@ function drawDiagram(chord, level){
   // cases (traits horizontaux)
   for (let r=0;r<=ROWS;r++){
     const thick = (r===0 && base===1);
-    s += `<line x1="${sx(0)-1}" x2="${sx(5)+1}" y1="${TOP+r*ROW}" y2="${TOP+r*ROW}" stroke="var(--line)" stroke-width="${thick?9:2.5}" stroke-linecap="square" ${thick?'':'class="fretline"'}/>`;
+    s += `<line x1="${sx(0)-1}" x2="${sx(5)+1}" y1="${TOP+r*ROW}" y2="${TOP+r*ROW}" stroke="var(--line)" stroke-width="${thick?9:2.5}" stroke-linecap="square"/>`;
   }
   // cordes
   for (let i=0;i<6;i++)
@@ -239,7 +325,7 @@ function drawDiagram(chord, level){
 
   // doigts (barrés d'abord pour que les doigts simples passent par-dessus)
   const fingers = [...level.fingers].sort((a,b) => (b[2]-b[1]) - (a[2]-a[1]));
-  fingers.forEach(([fret,a,b,lab], k) => {
+  fingers.forEach(([fret,a,b,lab]) => {
     const cy = TOP + (fret - base + .5)*ROW;
     const x1 = sx(a), x2 = sx(b);
     const fill = dotFill(lab);
@@ -256,11 +342,13 @@ function drawDiagram(chord, level){
 /* ============================================================
    UI
    ============================================================ */
-const state = { chord:'F', level:'l1' };
+// chord : accord affiché ; pref : niveau souhaité (gardé quand on change d'accord)
+const state = { chord:'F', pref:'l1' };
 
 function chordById(id){ return CHORDS.find(c => c.id === id) || CHORDS[0]; }
 
 function nearestLevel(chord, wanted){
+  if (chord.levels.length === 1) return chord.levels[0].id;
   if (chord.levels.some(l => l.id === wanted)) return wanted;
   const w = LEVEL_ORDER.indexOf(wanted);
   return [...chord.levels].sort((a,b) => {
@@ -272,18 +360,29 @@ function nearestLevel(chord, wanted){
 function render(){
   const chord = chordById(state.chord);
   state.chord = chord.id;
-  state.level = nearestLevel(chord, state.level);
-  const level = chord.levels.find(l => l.id === state.level);
+  const level = chord.levels.find(l => l.id === nearestLevel(chord, state.pref));
+  const multi = chord.levels.length > 1;
+  const siblings = CHORDS.filter(c => c.root === chord.root);
 
-  // boutons
-  $('chords').innerHTML = CHORDS.map(c =>
+  // 1. notes
+  $('roots').innerHTML = ROOTS.map(r =>
+    `<button type="button" data-root="${r}" aria-pressed="${r===chord.root}">${r}</button>`).join('');
+
+  // 2. accords de la note choisie (masqué s'il n'y en a qu'un)
+  $('types').hidden = siblings.length < 2;
+  $('types').innerHTML = siblings.map(c =>
     `<button type="button" data-chord="${c.id}" aria-pressed="${c.id===chord.id}">${c.label}</button>`).join('');
-  $('levels').innerHTML = chord.levels.map(l =>
-    `<button type="button" data-level="${l.id}" aria-pressed="${l.id===level.id}">${l.name}</button>`).join('');
+
+  // 3. niveaux (masqués pour les accords sans progression)
+  $('levelsBox').hidden = !multi;
+  $('hint').hidden = !multi;
+  $('levels').innerHTML = multi ? chord.levels.map(l =>
+    `<button type="button" data-level="${l.id}" aria-pressed="${l.id===level.id}">${l.name}</button>`).join('') : '';
 
   // diagramme
-  $('title').textContent = `${chord.label} ${level.name}`;
-  $('diagram').setAttribute('aria-label', `Diagramme de ${chord.label}, ${level.name}`);
+  const title = multi ? `${chord.label} ${level.name}` : chord.label;
+  $('title').textContent = title;
+  $('diagram').setAttribute('aria-label', `Diagramme de ${title}`);
   drawDiagram(chord, level);
 
   // infos
@@ -310,26 +409,36 @@ $('legend').innerHTML = [
   [`<svg viewBox="0 0 22 22"><path d="M5 5L17 17M17 5L5 17" stroke="var(--red)" stroke-width="3" stroke-linecap="round"/></svg>`, 'non jouée']
 ].map(([i,t]) => `<li>${i}${t}</li>`).join('');
 
-$('chords').addEventListener('click', e => {
+$('roots').addEventListener('click', e => {
+  const b = e.target.closest('button[data-root]'); if (!b) return;
+  const cur = chordById(state.chord);
+  const cands = CHORDS.filter(c => c.root === b.dataset.root);
+  // on garde le même type (majeur → majeur, mineur → mineur) quand il existe
+  state.chord = (cands.find(c => c.type === cur.type) || cands[0]).id;
+  render();
+});
+$('types').addEventListener('click', e => {
   const b = e.target.closest('button[data-chord]'); if (!b) return;
   state.chord = b.dataset.chord; render();
 });
 $('levels').addEventListener('click', e => {
   const b = e.target.closest('button[data-level]'); if (!b) return;
-  state.level = b.dataset.level; render();
+  state.pref = b.dataset.level; render();
 });
 document.addEventListener('keydown', e => {
   if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
   const chord = chordById(state.chord);
-  const i = chord.levels.findIndex(l => l.id === state.level);
+  if (chord.levels.length < 2) return;
+  const cur = nearestLevel(chord, state.pref);
+  const i = chord.levels.findIndex(l => l.id === cur);
   const j = Math.max(0, Math.min(chord.levels.length-1, i + (e.key==='ArrowRight' ? 1 : -1)));
-  if (j !== i){ state.level = chord.levels[j].id; render(); }
+  if (j !== i){ state.pref = chord.levels[j].id; render(); }
 });
 
-// état initial depuis l'URL (#F-l3)
+// état initial depuis l'URL (#Fs-l3, #Am-std)
 (function init(){
-  const m = location.hash.slice(1).match(/^([A-Za-z]+)-(l\d|bar)$/);
-  if (m){ state.chord = m[1]; state.level = m[2]; }
+  const m = location.hash.slice(1).match(/^([A-Za-z0-9]+)-(l\d|bar|std)$/);
+  if (m){ state.chord = m[1]; if (m[2] !== 'std') state.pref = m[2]; }
   checkData();
   render();
 })();
