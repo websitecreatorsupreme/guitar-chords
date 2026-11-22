@@ -136,17 +136,17 @@ const CHORDS = [
   /* ---------- B ---------- */
   { id:'B', label:'B', root:'B', type:'maj', base:2, levels:[
     { id:'l1', name:'Level 1', frets:[x,x,4,4,4,x],
-      fingers:[[4,2,4,'3']],
-      tip:'Un seul doigt : l’annulaire posé à plat sur D, G et B (case 4). Joue uniquement ces 3 cordes.' },
+      fingers:[[4,2,2,'1'],[4,3,3,'2'],[4,4,4,'3']],
+      tip:'Un doigt par corde, tous à la case 4 : index sur D, majeur sur G, annulaire sur B. Joue uniquement ces 3 cordes.' },
     { id:'l2', name:'Level 2', frets:[x,x,4,4,4,2],
-      fingers:[[4,2,4,'3'],[2,5,5,'1']],
-      tip:'On ajoute l’index sur la corde e (case 2).' },
+      fingers:[[4,2,2,'2'],[4,3,3,'3'],[4,4,4,'4'],[2,5,5,'1']],
+      tip:'On ajoute l’index sur la corde e (case 2) : majeur, annulaire et auriculaire tiennent D, G et B à la case 4.' },
     { id:'l3', name:'Level 3', frets:[x,2,4,4,4,x],
-      fingers:[[2,1,1,'1'],[4,2,4,'3']],
-      tip:'L’index passe sur la corde de A (case 2) : tu as maintenant la fondamentale B dans les graves. Étouffe E et e.' },
+      fingers:[[2,1,1,'1'],[4,2,2,'2'],[4,3,3,'3'],[4,4,4,'4']],
+      tip:'L’index passe sur la corde de A (case 2) : tu as maintenant la fondamentale B dans les graves. Majeur, annulaire et auriculaire sur D, G, B (case 4). Étouffe E et e.' },
     { id:'bar', name:'Bar chord', frets:[x,2,4,4,4,2],
-      fingers:[[2,1,5,'1'],[4,2,4,'3']],
-      tip:'L’index barre de A à e à la case 2, l’annulaire reste à plat sur D, G, B (case 4). Le E grave n’est pas joué.' }
+      fingers:[[2,1,5,'1'],[4,2,2,'2'],[4,3,3,'3'],[4,4,4,'4']],
+      tip:'L’index barre de A à e à la case 2 ; majeur, annulaire et auriculaire sur D, G, B (case 4). Le E grave n’est pas joué.' }
   ]},
   { id:'Bm', label:'Bm', root:'B', type:'min', base:2, levels:[
     { id:'l1', name:'Level 1', frets:[x,x,0,4,3,2],
