@@ -48,14 +48,14 @@
   .types button:hover{background:var(--chip-hover)}
   .types button[aria-pressed="true"]{background:var(--root-bg); color:var(--root-ink); border-color:var(--accent)}
 
-  /* 3. niveaux */
-  .levels{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:22px}
-  .levels button{
+  /* 3. niveaux  +  4. mode d'affichage */
+  .levels,.modes{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px}
+  .levels button,.modes button{
     font:inherit; font-size:.95rem; font-weight:600; padding:9px 16px; border:0; border-radius:999px;
     background:var(--chip); color:var(--ink); cursor:pointer; transition:background .15s;
   }
-  .levels button:hover{background:var(--chip-hover)}
-  .levels button[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
+  .levels button:hover,.modes button:hover{background:var(--chip-hover)}
+  .levels button[aria-pressed="true"],.modes button[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
   button:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
 
   .card{background:var(--card); border-radius:18px; padding:14px 8px 6px; box-shadow:0 2px 14px rgba(0,0,0,.08)}
@@ -68,9 +68,6 @@
   .tab span{padding:2px 0}
   .tab .names{color:var(--muted); font-size:.8rem}
   .tab .fr{font-size:1.1rem; font-weight:700}
-  .notes{display:flex; gap:6px; flex-wrap:wrap; align-items:center}
-  .chip{padding:3px 11px; border-radius:999px; background:var(--chip); font-weight:600; font-size:.9rem}
-  .chip.root{background:var(--root-bg); color:var(--root-ink)}
   .legend{display:flex; flex-wrap:wrap; gap:6px 16px; font-size:.85rem; color:var(--muted); margin:0; padding:0; list-style:none}
   .legend li{display:flex; align-items:center; gap:6px}
   .legend svg{width:22px; height:22px; flex:none}
@@ -89,6 +86,9 @@
     <div class="levels" id="levels" role="group" aria-label="Niveau de difficulté"></div>
   </div>
 
+  <p class="label">Affichage</p>
+  <div class="modes" id="modes" role="group" aria-label="Contenu des pastilles"></div>
+
   <section class="card" aria-live="polite">
     <h2 id="title"></h2>
     <svg id="diagram" viewBox="0 0 360 400" role="img"></svg>
@@ -97,7 +97,6 @@
   <div class="info">
     <p class="tip" id="tip"></p>
     <div><p class="label">Frettes (E A D G B e)</p><div class="tab" id="tab"></div></div>
-    <div><p class="label">Notes jouées</p><div class="notes" id="notes"></div></div>
     <ul class="legend" id="legend"></ul>
     <p class="hint" id="hint">Astuce : les flèches ← → changent de niveau.</p>
   </div>
@@ -257,15 +256,20 @@ const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const LEVEL_ORDER = ['l1','l2','l3','l4','bar'];
 const $ = id => document.getElementById(id);
 
-function notesOf(level){
-  const out = [];
-  level.frets.forEach((f,i) => {
-    if (f === x) return;
-    const n = NOTE_NAMES[(OPEN_SEMITONE[i] + f) % 12];
-    if (!out.includes(n)) out.push(n);
-  });
-  return out;
+const SOLFEGE = ['Do','Do#','Ré','Ré#','Mi','Fa','Fa#','Sol','Sol#','La','La#','Si'];
+const MODES = [
+  { id:'fingers', name:'Doigts' },
+  { id:'letters', name:'A B C' },
+  { id:'solfege', name:'Do Ré Mi' }
+];
+// note jouée sur la corde i à la case fret, selon le mode (letters = A B C…, solfege = Do Ré Mi…)
+function noteAt(i, fret, mode){
+  const n = (OPEN_SEMITONE[i] + fret) % 12;
+  return (mode === 'solfege' ? SOLFEGE : NOTE_NAMES)[n];
 }
+const fontFor = t => t.length <= 1 ? 22 : t.length === 2 ? 19 : t.length === 3 ? 16 : 13;
+const labelSvg = (cx, cy, t) =>
+  `<text x="${cx}" y="${cy + fontFor(t)*.36}" text-anchor="middle" font-size="${fontFor(t)}" font-weight="700" fill="#2b1a08">${t}</text>`;
 
 // Contrôle de cohérence (console) : chaque corde jouée et non à vide doit avoir un doigt.
 function checkData(){
@@ -277,8 +281,13 @@ function checkData(){
       if (!ok) console.warn(`${tag}: corde ${STRING_NAMES[i]} case ${f} sans doigt`);
     });
     l.fingers.forEach(([fr,a,b]) => {
-      for (let i=a;i<=b;i++) if (l.frets[i] !== fr)
-        console.warn(`${tag}: doigt case ${fr} sur corde ${STRING_NAMES[i]} incohérent`);
+      for (let i=a;i<=b;i++){
+        const f = l.frets[i];
+        // sous un barré, une corde peut être tenue plus haut par un autre doigt (ou muette), jamais à vide
+        const okBarre = a < b && f !== 0 && (f === x || f >= fr);
+        if (f !== fr && !okBarre)
+          console.warn(`${tag}: doigt case ${fr} sur corde ${STRING_NAMES[i]} incohérent`);
+      }
     });
   }));
 }
@@ -290,7 +299,7 @@ const LEFT=78, GAP=44, TOP=84, ROW=62, ROWS=4, R=19;
 const sx = i => LEFT + i*GAP;
 const dotFill = lab => (lab==='1' || lab==='3') ? 'var(--yellow)' : 'var(--orange)';
 
-function drawDiagram(chord, level){
+function drawDiagram(chord, level, mode){
   const base = chord.base;
   const bottom = TOP + ROWS*ROW;
   let s = '';
@@ -319,7 +328,8 @@ function drawDiagram(chord, level){
     if (f === x){
       s += `<path d="M${sx(i)-9} ${my-9} L${sx(i)+9} ${my+9} M${sx(i)+9} ${my-9} L${sx(i)-9} ${my+9}" stroke="var(--red)" stroke-width="3.5" stroke-linecap="round" fill="none"/>`;
     } else if (f === 0){
-      s += `<circle cx="${sx(i)}" cy="${my}" r="14" fill="var(--orange)" stroke="var(--dot-stroke)" stroke-width="2"/>`;
+      s += `<circle cx="${sx(i)}" cy="${my}" r="15" fill="var(--orange)" stroke="var(--dot-stroke)" stroke-width="2"/>`;
+      if (mode !== 'fingers') s += labelSvg(sx(i), my, noteAt(i, 0, mode)).replace(/font-size="(\d+)"/, (m, n) => `font-size="${Math.min(+n, 15)}"`);
     }
   });
 
@@ -332,8 +342,14 @@ function drawDiagram(chord, level){
     const shape = a===b
       ? `<circle cx="${x1}" cy="${cy}" r="${R}" fill="${fill}" stroke="var(--dot-stroke)" stroke-width="2"/>`
       : `<rect x="${x1-R}" y="${cy-R}" width="${x2-x1+2*R}" height="${2*R}" rx="${R}" fill="${fill}" stroke="var(--dot-stroke)" stroke-width="2"/>`;
-    s += `<g>${shape}
-      <text x="${(x1+x2)/2}" y="${cy+8}" text-anchor="middle" font-size="22" font-weight="700" fill="#2b1a08">${lab}</text></g>`;
+    let txt = '';
+    if (mode === 'fingers') {
+      txt = labelSvg((x1+x2)/2, cy, lab);
+    } else {
+      // une note par corde réellement tenue par ce doigt (sous un barré, les cordes tenues plus haut ont leur propre doigt)
+      for (let i=a;i<=b;i++) if (level.frets[i] === fret) txt += labelSvg(sx(i), cy, noteAt(i, fret, mode));
+    }
+    s += `<g>${shape}${txt}</g>`;
   });
 
   $('diagram').innerHTML = s;
@@ -343,7 +359,8 @@ function drawDiagram(chord, level){
    UI
    ============================================================ */
 // chord : accord affiché ; pref : niveau souhaité (gardé quand on change d'accord)
-const state = { chord:'F', pref:'l1' };
+// mode : contenu des pastilles — 'fingers' (défaut), 'letters' (A B C), 'solfege' (Do Ré Mi)
+const state = { chord:'F', pref:'l1', mode:'fingers' };
 
 function chordById(id){ return CHORDS.find(c => c.id === id) || CHORDS[0]; }
 
@@ -379,19 +396,22 @@ function render(){
   $('levels').innerHTML = multi ? chord.levels.map(l =>
     `<button type="button" data-level="${l.id}" aria-pressed="${l.id===level.id}">${l.name}</button>`).join('') : '';
 
+  // 4. mode d'affichage
+  $('modes').innerHTML = MODES.map(m =>
+    `<button type="button" data-mode="${m.id}" aria-pressed="${m.id===state.mode}">${m.name}</button>`).join('');
+
   // diagramme
   const title = multi ? `${chord.label} ${level.name}` : chord.label;
   $('title').textContent = title;
   $('diagram').setAttribute('aria-label', `Diagramme de ${title}`);
-  drawDiagram(chord, level);
+  drawDiagram(chord, level, state.mode);
+  renderLegend(state.mode);
 
   // infos
   $('tip').textContent = level.tip;
   $('tab').innerHTML =
     STRING_NAMES.map(n => `<span class="names">${n}</span>`).join('') +
     level.frets.map(f => `<span class="fr">${f}</span>`).join('');
-  $('notes').innerHTML = notesOf(level).map(n =>
-    `<span class="chip${n===chord.root?' root':''}">${n}</span>`).join('');
 
   try { history.replaceState(null, '', `#${chord.id}-${level.id}`); } catch(e){}
 }
@@ -399,15 +419,22 @@ function render(){
 const dotIcon = (fill, txt) =>
   `<svg viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="${fill}" stroke="var(--dot-stroke)" stroke-width="1.5"/>` +
   (txt ? `<text x="11" y="15.5" text-anchor="middle" font-size="12" font-weight="700" fill="#2b1a08">${txt}</text>` : '') + `</svg>`;
-$('legend').innerHTML = [
-  [dotIcon('var(--yellow)','1'), 'index'],
-  [dotIcon('var(--orange)','2'), 'majeur'],
-  [dotIcon('var(--yellow)','3'), 'annulaire'],
-  [dotIcon('var(--orange)','4'), 'auriculaire'],
-  [dotIcon('var(--orange)','T'), 'pouce'],
-  [dotIcon('var(--orange)',''), 'corde à vide'],
-  [`<svg viewBox="0 0 22 22"><path d="M5 5L17 17M17 5L5 17" stroke="var(--red)" stroke-width="3" stroke-linecap="round"/></svg>`, 'non jouée']
-].map(([i,t]) => `<li>${i}${t}</li>`).join('');
+function renderLegend(mode){
+  const fingerItems = [
+    [dotIcon('var(--yellow)','1'), 'index'],
+    [dotIcon('var(--orange)','2'), 'majeur'],
+    [dotIcon('var(--yellow)','3'), 'annulaire'],
+    [dotIcon('var(--orange)','4'), 'auriculaire'],
+    [dotIcon('var(--orange)','T'), 'pouce']
+  ];
+  const stringItems = [
+    [dotIcon('var(--orange)',''), 'corde à vide'],
+    [`<svg viewBox="0 0 22 22"><path d="M5 5L17 17M17 5L5 17" stroke="var(--red)" stroke-width="3" stroke-linecap="round"/></svg>`, 'non jouée']
+  ];
+  // la légende des doigts n'a de sens qu'en mode « Doigts »
+  $('legend').innerHTML = (mode === 'fingers' ? [...fingerItems, ...stringItems] : stringItems)
+    .map(([i,t]) => `<li>${i}${t}</li>`).join('');
+}
 
 $('roots').addEventListener('click', e => {
   const b = e.target.closest('button[data-root]'); if (!b) return;
@@ -420,6 +447,10 @@ $('roots').addEventListener('click', e => {
 $('types').addEventListener('click', e => {
   const b = e.target.closest('button[data-chord]'); if (!b) return;
   state.chord = b.dataset.chord; render();
+});
+$('modes').addEventListener('click', e => {
+  const b = e.target.closest('button[data-mode]'); if (!b) return;
+  state.mode = b.dataset.mode; render();
 });
 $('levels').addEventListener('click', e => {
   const b = e.target.closest('button[data-level]'); if (!b) return;
