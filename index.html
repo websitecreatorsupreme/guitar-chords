@@ -93,6 +93,20 @@
   .cell:focus{outline:none}
   .cell:focus-visible circle{stroke:var(--line); stroke-width:4}
   #fbHint{margin-top:14px}
+
+  /* quiz */
+  .quiz-msg{margin:18px 0 12px; font-size:1.15rem; font-weight:600}
+  .answers{display:grid; grid-template-columns:repeat(auto-fill,minmax(62px,1fr)); gap:8px; max-width:640px}
+  .answers button{
+    font:inherit; font-size:1.05rem; font-weight:700; padding:12px 0; border:0; border-radius:12px;
+    background:var(--chip); color:var(--ink); cursor:pointer;
+  }
+  .answers button:hover:enabled{background:var(--chip-hover)}
+  .answers button:disabled{cursor:default; opacity:.45}
+  .answers button.wrong{background:#b23b3b; color:#fff; opacity:.7}
+  .answers button.right{background:#2e8540; color:#fff; opacity:1}
+  .quiz-bar{display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:10px; margin-top:16px; max-width:640px; font-weight:600}
+  .quiz-bar .modes{margin:0}
 </style>
 </head>
 <body>
@@ -136,8 +150,16 @@
         <div class="modes" id="fbNotation" role="group" aria-label="Notation"></div>
       </div>
       <div>
+        <p class="label">Notes affichées</p>
+        <div class="modes" id="fbNotes" role="group" aria-label="Notes affichées"></div>
+      </div>
+      <div>
         <p class="label">Mode</p>
         <div class="modes" id="fbMode" role="group" aria-label="Mode"></div>
+      </div>
+      <div id="fbExerciseBox" hidden>
+        <p class="label">Type de révision</p>
+        <div class="modes" id="fbExercise" role="group" aria-label="Type de révision"></div>
       </div>
     </div>
     <section class="card">
@@ -145,6 +167,14 @@
         <svg id="fretboard" viewBox="0 0 880 384" role="group" aria-label="Manche de guitare, cases 0 à 12"></svg>
       </div>
     </section>
+    <div id="quiz" hidden>
+      <p class="quiz-msg" id="quizMsg" aria-live="polite"></p>
+      <div class="answers" id="quizAnswers" role="group" aria-label="Réponses"></div>
+      <div class="quiz-bar">
+        <span id="quizScore"></span>
+        <div class="modes" id="quizActions"></div>
+      </div>
+    </div>
     <p class="hint" id="fbHint"></p>
   </div>
 </main>
@@ -520,12 +550,21 @@ document.addEventListener('keydown', e => {
 const FB = { nut:110, cell:62, frets:12, top:40, gap:52, r:22 };
 const FB_NOTATIONS = MODES.filter(m => m.id !== 'fingers');       // A B C / Do Ré Mi
 const FB_MODES = [ { id:'see', name:'Toutes les notes' }, { id:'review', name:'Révision' } ];
-// shown : ronds révélés en mode révision, sous la forme "corde-case"
-const fb = { notation:'letters', mode:'see', shown:new Set() };
+const FB_NOTES = [ { id:'all', name:'Toutes' }, { id:'naturals', name:'Naturelles seulement' } ];
+const FB_EXERCISES = [ { id:'free', name:'Libre' }, { id:'quiz', name:'Quiz' } ];
+// shown : ronds révélés en révision libre, sous la forme "corde-case"
+const fb = { notation:'letters', notes:'all', mode:'see', exercise:'free', shown:new Set() };
+// quiz : target = "corde-case" ; status = 'ask' | 'found' | 'revealed'
+const quiz = { target:null, wrong:new Set(), status:'ask', score:0, total:0, timer:null };
+
+const parseKey = key => key.split('-').map(Number);                      // [corde, case]
+const noteIndex = key => { const [i,f] = parseKey(key); return (OPEN_SEMITONE[i] + f) % 12; };
+const isShownNote = n => fb.notes === 'all' || !NOTE_NAMES[n].includes('#');
+const isQuiz = () => fb.mode === 'review' && fb.exercise === 'quiz';
 
 function drawFretboard(){
   const { nut, cell, frets, top, gap, r } = FB;
-  const review = fb.mode === 'review';
+  const review = fb.mode === 'review' && fb.exercise === 'free';
   const right = nut + frets*cell;
   const bottom = top + 5*gap;
   let s = '';
@@ -556,34 +595,128 @@ function drawFretboard(){
     for (let f=0;f<=frets;f++){
       const cx = f === 0 ? nut - 40 : nut + (f-.5)*cell;
       const key = `${i}-${f}`;
+      if (!isShownNote(noteIndex(key))) continue;
       const note = noteAt(i, f, fb.notation);
-      const visible = !review || fb.shown.has(key);
-      const fill = !visible ? '#f2ede4' : note.includes('#') ? 'var(--orange)' : 'var(--yellow)';
-      const stroke = visible ? 'var(--dot-stroke)' : '#bfb29e';
+      const target = isQuiz() && key === quiz.target;
+      const visible = fb.mode === 'see' || (review && fb.shown.has(key)) || (target && quiz.status !== 'ask');
+      let fill = !visible ? '#f2ede4' : note.includes('#') ? 'var(--orange)' : 'var(--yellow)';
+      let stroke = visible ? 'var(--dot-stroke)' : '#bfb29e';
+      let label = visible ? note : '';
+      let ink = '#2b1a08';
+      if (target){                      // bleu : question en cours ou réponse donnée ; vert : trouvé
+        fill = stroke = quiz.status === 'found' ? '#2e8540' : '#2563b0';
+        ink = '#fff';
+        label = quiz.status === 'ask' ? '?' : note;
+      }
       const where = `Corde ${6-i}, ${f === 0 ? 'à vide' : 'case ' + f}`;
+      const said = visible ? note : 'note masquée';
       const attrs = review
-        ? `class="cell rev" data-key="${key}" tabindex="0" role="button" aria-pressed="${visible}" aria-label="${where}${visible ? ' : ' + note : ' : note masquée'}"`
-        : `class="cell" aria-label="${where} : ${note}"`;
-      const size = [0,21,19,17,15][note.length];
-      s += `<g ${attrs}><circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="2"/>` +
-        (visible ? `<text x="${cx}" y="${cy + size*.36}" text-anchor="middle" font-size="${size}" font-weight="700" fill="#2b1a08">${note}</text>` : '') +
+        ? `class="cell rev" data-key="${key}" tabindex="0" role="button" aria-pressed="${visible}" aria-label="${where} : ${said}"`
+        : target
+          ? `class="cell target" aria-label="Question : ${where}"`
+          : `class="cell" aria-label="${where} : ${said}"`;
+      const size = label === '?' ? 27 : [0,21,19,17,15][label.length];
+      s += `<g ${attrs}><circle cx="${cx}" cy="${cy}" r="${target ? r+2 : r}" fill="${fill}" stroke="${stroke}" stroke-width="2"/>` +
+        (label ? `<text x="${cx}" y="${cy + size*.36}" text-anchor="middle" font-size="${size}" font-weight="700" fill="${ink}">${label}</text>` : '') +
         `</g>`;
     }
   }
   $('fretboard').innerHTML = s;
 }
 
+const segmented = (list, attr, current) => list.map(o =>
+  `<button type="button" ${attr}="${o.id}" aria-pressed="${o.id===current}">${o.name}</button>`).join('');
+
 function renderFretboard(){
-  $('fbNotation').innerHTML = FB_NOTATIONS.map(n =>
-    `<button type="button" data-notation="${n.id}" aria-pressed="${n.id===fb.notation}">${n.name}</button>`).join('');
-  $('fbMode').innerHTML = FB_MODES.map(m =>
-    `<button type="button" data-fbmode="${m.id}" aria-pressed="${m.id===fb.mode}">${m.name}</button>`).join('') +
-    (fb.mode === 'review'
+  const review = fb.mode === 'review';
+  $('fbNotation').innerHTML = segmented(FB_NOTATIONS, 'data-notation', fb.notation);
+  $('fbNotes').innerHTML = segmented(FB_NOTES, 'data-notes', fb.notes);
+  $('fbMode').innerHTML = segmented(FB_MODES, 'data-fbmode', fb.mode);
+  $('fbExerciseBox').hidden = !review;
+  $('fbExercise').innerHTML = segmented(FB_EXERCISES, 'data-exercise', fb.exercise) +
+    (fb.exercise === 'free'
       ? `<button type="button" class="ghost" data-clear ${fb.shown.size ? '' : 'disabled'}>Tout masquer</button>` : '');
-  $('fbHint').textContent = fb.mode === 'review'
-    ? 'Clique sur un rond pour révéler sa note, reclique pour la cacher. Corde 1 = e aiguë (en haut), corde 6 = E grave (en bas).'
-    : 'Cases 0 (à vide) à 12 ; au-delà, les notes recommencent. Corde 1 = e aiguë (en haut), corde 6 = E grave (en bas).';
+  $('quiz').hidden = !isQuiz();
+  if (isQuiz()) renderQuiz();
+
+  const intro = !review ? 'Cases 0 (à vide) à 12 ; au-delà, les notes recommencent.'
+    : isQuiz() ? 'Trouve la note du rond « ? ». Le score compte les réponses justes du premier coup.'
+    : 'Clique sur un rond pour révéler sa note, reclique pour la cacher.';
+  $('fbHint').textContent = intro + ' Corde 1 = e aiguë (en haut), corde 6 = E grave (en bas).' +
+    (fb.notes === 'naturals' ? ' Les dièses et bémols sont masqués.' : '');
   drawFretboard();
+}
+
+/* ---------- quiz ---------- */
+function renderQuiz(){
+  const names = fb.notation === 'solfege' ? SOLFEGE : NOTE_NAMES;
+  const good = noteIndex(quiz.target);
+  const [i,f] = parseKey(quiz.target);
+  const asking = quiz.status === 'ask';
+
+  $('quizMsg').textContent =
+    quiz.status === 'found' ? `Bravo, c’est ${names[good]} !`
+    : quiz.status === 'revealed' ? `C’était ${names[good]}.`
+    : quiz.wrong.size ? 'Pas tout à fait, essaie encore.'
+    : `Quelle est la note ? (corde ${6-i}, ${f === 0 ? 'à vide' : 'case ' + f})`;
+
+  // A B C commence à A ; Do Ré Mi commence à Do
+  const start = fb.notation === 'solfege' ? 0 : 9;
+  const order = Array.from({length:12}, (_,k) => (start + k) % 12).filter(isShownNote);
+  $('quizAnswers').innerHTML = order.map(n => {
+    const cls = !asking && n === good ? 'right' : quiz.wrong.has(n) ? 'wrong' : '';
+    return `<button type="button" class="${cls}" data-note="${n}" ${!asking || quiz.wrong.has(n) ? 'disabled' : ''}>${names[n]}</button>`;
+  }).join('');
+
+  $('quizScore').textContent = `Score : ${quiz.score} / ${quiz.total}`;
+  $('quizActions').innerHTML =
+    asking ? '<button type="button" data-reveal>Voir la réponse</button>'
+    : quiz.status === 'revealed' ? '<button type="button" data-next>Question suivante</button>' : '';
+}
+
+function newQuestion(){
+  clearTimeout(quiz.timer);
+  const keys = [];
+  for (let i=0;i<6;i++) for (let f=0;f<=FB.frets;f++){
+    const key = `${i}-${f}`;
+    if (key !== quiz.target && isShownNote(noteIndex(key))) keys.push(key);   // jamais deux fois de suite la même case
+  }
+  quiz.target = keys[Math.floor(Math.random() * keys.length)];
+  quiz.wrong.clear();
+  quiz.status = 'ask';
+}
+
+// sur petit écran, amène le rond « ? » dans la partie visible du manche
+function scrollToTarget(){
+  const box = document.querySelector('.scroll'), el = $('fretboard').querySelector('.target');
+  if (!el) return;
+  const b = box.getBoundingClientRect(), t = el.getBoundingClientRect();
+  if (t.left < b.left || t.right > b.right) box.scrollLeft += t.left - b.left - (b.width - t.width)/2;
+}
+
+function nextQuestion(){ newQuestion(); renderFretboard(); scrollToTarget(); }
+
+function answer(n){
+  if (quiz.status !== 'ask') return;
+  if (n === noteIndex(quiz.target)){
+    quiz.status = 'found';
+    quiz.total++;
+    if (!quiz.wrong.size) quiz.score++;
+    quiz.timer = setTimeout(nextQuestion, 1200);
+  } else {
+    quiz.wrong.add(n);
+  }
+  renderFretboard();
+}
+
+// change de mode ou de type de révision : on repart de zéro
+function setStudy(mode, exercise){
+  if (mode === fb.mode && exercise === fb.exercise) return;
+  clearTimeout(quiz.timer);
+  Object.assign(fb, { mode, exercise });
+  fb.shown.clear();
+  Object.assign(quiz, { target:null, score:0, total:0 });
+  if (isQuiz()) newQuestion();
 }
 
 function toggleCell(key){
@@ -595,13 +728,32 @@ $('fbNotation').addEventListener('click', e => {
   const b = e.target.closest('button[data-notation]'); if (!b) return;
   fb.notation = b.dataset.notation; renderFretboard();     // les ronds révélés le restent
 });
+$('fbNotes').addEventListener('click', e => {
+  const b = e.target.closest('button[data-notes]'); if (!b) return;
+  fb.notes = b.dataset.notes;
+  // la question en cours porte sur une note qu'on vient de masquer : on en tire une autre
+  if (isQuiz() && !isShownNote(noteIndex(quiz.target))) newQuestion();
+  renderFretboard(); scrollToTarget();
+});
 $('fbMode').addEventListener('click', e => {
+  const b = e.target.closest('button[data-fbmode]'); if (!b) return;
+  setStudy(b.dataset.fbmode, fb.exercise);
+  renderFretboard(); scrollToTarget();
+});
+$('fbExercise').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   if (b.hasAttribute('data-clear')) fb.shown.clear();
-  else if (b.dataset.fbmode !== fb.mode){
-    fb.mode = b.dataset.fbmode;
-    fb.shown.clear();                                      // chaque révision démarre à vide
-  }
+  else setStudy('review', b.dataset.exercise);
+  renderFretboard(); scrollToTarget();
+});
+$('quizAnswers').addEventListener('click', e => {
+  const b = e.target.closest('button[data-note]'); if (b) answer(Number(b.dataset.note));
+});
+$('quizActions').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.hasAttribute('data-next')) return nextQuestion();
+  quiz.status = 'revealed';
+  quiz.total++;
   renderFretboard();
 });
 $('fretboard').addEventListener('click', e => {
@@ -632,7 +784,7 @@ function setView(v){
   document.querySelector('main').classList.toggle('wide', v === 'fretboard');
   document.querySelectorAll('#views button').forEach(b =>
     b.setAttribute('aria-pressed', b.dataset.view === v));
-  if (v === 'fretboard'){ setHash('fretboard'); renderFretboard(); }
+  if (v === 'fretboard'){ setHash('fretboard'); renderFretboard(); scrollToTarget(); }
   else render();
 }
 
