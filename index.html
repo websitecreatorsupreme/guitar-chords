@@ -25,7 +25,8 @@
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     line-height:1.45; -webkit-font-smoothing:antialiased;
   }
-  main{max-width:560px; margin:0 auto; padding:28px 16px 48px}
+  html{scrollbar-gutter:stable}   /* la barre de défilement ne décale pas la page d'un onglet à l'autre */
+  main{max-width:1000px; margin:0 auto; padding:28px 16px 48px}   /* même largeur sur tous les onglets */
   h1{font-size:1.5rem; margin:0 0 20px; letter-spacing:-.01em}
   .label{font-size:.72rem; text-transform:uppercase; letter-spacing:.09em; color:var(--muted); margin:0 0 8px}
 
@@ -74,7 +75,6 @@
   .hint{font-size:.8rem; color:var(--muted); margin:0}
 
   /* onglets Accords / Fretboard */
-  main.wide{max-width:1000px}
   .views{display:flex; gap:22px; margin-bottom:22px; border-bottom:2px solid var(--chip)}
   .views button{
     font:inherit; font-size:1rem; font-weight:700; padding:6px 2px 10px; margin-bottom:-2px; border:0;
@@ -83,11 +83,12 @@
   .views button[aria-pressed="true"]{color:var(--ink); border-bottom-color:var(--accent)}
 
   /* fretboard */
-  .controls{display:flex; flex-wrap:wrap; column-gap:36px; align-items:flex-end}
+  /* deux colonnes fixes : le manche ne bouge pas quand un réglage apparaît */
+  .controls{display:grid; grid-template-columns:repeat(2,max-content); column-gap:36px; align-items:end}
   .modes button.ghost{background:none; border:2px solid var(--chip-hover); padding:7px 14px}
   .modes button.ghost:disabled{opacity:.4; cursor:default}
   .scroll{overflow-x:auto}
-  .card #fretboard{max-width:none; min-width:700px; margin:0}
+  .card svg.board{max-width:none; min-width:700px; margin:0}
   .cell.rev{cursor:pointer}
   .cell.rev:hover circle{stroke:var(--accent); stroke-width:3.5}
   .cell:focus{outline:none}
@@ -107,6 +108,35 @@
   .answers button.right{background:#2e8540; color:#fff; opacity:1}
   .quiz-bar{display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:10px; margin-top:16px; max-width:640px; font-weight:600}
   .quiz-bar .modes{margin:0}
+
+  /* lecture d'une gamme */
+  .player{margin-top:16px}
+  .player .modes{margin-bottom:10px; align-items:center}
+  /* bouton Play dans l'en-tête de la carte : visible avec le manche, sans rien décaler */
+  .card.stage{position:relative}
+  .play{
+    position:absolute; top:12px; right:14px; min-width:130px; border:0; border-radius:999px; padding:10px 16px;
+    font:inherit; font-weight:700; background:var(--accent); color:var(--accent-ink); cursor:pointer;
+  }
+  .play:hover{filter:brightness(1.07)}
+  .modes .sep{width:12px}
+  .player-msg{margin:0; font-size:1.1rem; font-weight:600; min-height:1.6em}
+
+  /* onglet Accords : filtres à gauche, diagramme à droite */
+  .chords-layout{display:grid; grid-template-columns:300px minmax(0,1fr); column-gap:28px; align-items:start}
+  .chords-layout .roots button{font-size:1.35rem}
+  .chords-layout .info{margin-bottom:0}
+  @media (min-width:700px){
+    /* hauteurs réservées (2 rangées de boutons) pour que rien ne saute d'un accord à l'autre */
+    .chords-layout .types{min-height:92px; align-content:flex-start}
+    .chords-layout .levels{min-height:90px; align-content:flex-start}
+    .off{visibility:hidden}
+  }
+  @media (max-width:699px){
+    .chords-layout,.controls{grid-template-columns:minmax(0,1fr)}
+    .off{display:none}
+    .play{position:static; display:block; margin:10px auto 4px}
+  }
 </style>
 </head>
 <body>
@@ -116,9 +146,11 @@
   <nav class="views" id="views" aria-label="Rubriques">
     <button type="button" data-view="chords" aria-pressed="true">Accords</button>
     <button type="button" data-view="fretboard" aria-pressed="false">Fretboard</button>
+    <button type="button" data-view="scales" aria-pressed="false">Scales</button>
   </nav>
 
-  <div id="viewChords">
+  <div id="viewChords" class="chords-layout">
+  <div><!-- filtres -->
   <div class="roots" id="roots" role="group" aria-label="Note"></div>
   <div class="types" id="types" role="group" aria-label="Accord"></div>
 
@@ -129,7 +161,9 @@
 
   <p class="label">Affichage</p>
   <div class="modes" id="modes" role="group" aria-label="Contenu des pastilles"></div>
+  </div>
 
+  <div><!-- diagramme -->
   <section class="card" aria-live="polite">
     <h2 id="title"></h2>
     <svg id="diagram" viewBox="0 0 360 400" role="img"></svg>
@@ -140,6 +174,7 @@
     <div><p class="label">Frettes (E A D G B e)</p><div class="tab" id="tab"></div></div>
     <ul class="legend" id="legend"></ul>
     <p class="hint" id="hint">Astuce : les flèches ← → changent de niveau.</p>
+  </div>
   </div>
   </div><!-- /viewChords -->
 
@@ -157,14 +192,14 @@
         <p class="label">Mode</p>
         <div class="modes" id="fbMode" role="group" aria-label="Mode"></div>
       </div>
-      <div id="fbExerciseBox" hidden>
+      <div id="fbExerciseBox" class="off">
         <p class="label">Type de révision</p>
         <div class="modes" id="fbExercise" role="group" aria-label="Type de révision"></div>
       </div>
     </div>
     <section class="card">
       <div class="scroll">
-        <svg id="fretboard" viewBox="0 0 880 384" role="group" aria-label="Manche de guitare, cases 0 à 12"></svg>
+        <svg id="fretboard" class="board" viewBox="0 0 880 384" role="group" aria-label="Manche de guitare, cases 0 à 12"></svg>
       </div>
     </section>
     <div id="quiz" hidden>
@@ -176,6 +211,50 @@
       </div>
     </div>
     <p class="hint" id="fbHint"></p>
+  </div>
+
+  <div id="viewScales" hidden>
+    <p class="label">Gamme</p>
+    <div class="types" id="scType" role="group" aria-label="Gamme"></div>
+    <p class="label">Tonique</p>
+    <div class="types" id="scRoot" role="group" aria-label="Tonique"></div>
+    <div class="controls">
+      <div>
+        <p class="label">Affichage</p>
+        <div class="modes" id="scDisplay" role="group" aria-label="Contenu des ronds"></div>
+      </div>
+      <div>
+        <p class="label">Mode</p>
+        <div class="modes" id="scMode" role="group" aria-label="Mode"></div>
+      </div>
+    </div>
+
+    <section class="card stage">
+      <h2 id="scTitle"></h2>
+      <button type="button" class="play" id="plToggle" hidden>▶ Play</button>
+      <div class="scroll">
+        <svg id="scaleBoard" class="board" viewBox="0 0 880 384" role="img"></svg>
+      </div>
+    </section>
+
+    <div class="player" id="player" hidden>
+      <div class="modes">
+        <button type="button" id="plPrev">Note précédente</button>
+        <button type="button" id="plNext">Note suivante</button>
+        <button type="button" id="plReset">Recommencer</button>
+        <span class="sep"></span>
+        <span id="plSpeed" class="modes" role="group" aria-label="Vitesse" style="margin:0"></span>
+      </div>
+      <p class="player-msg" id="plMsg" aria-live="polite"></p>
+    </div>
+
+    <div class="info">
+      <p class="tip" id="scDesc"></p>
+      <div><p class="label">Notes de la gamme</p><p class="tip" id="scNotes"></p></div>
+      <div><p class="label">Intervalles (T = ton, ½ = demi-ton)</p><p class="tip" id="scSteps"></p></div>
+      <ul class="legend" id="scLegend"></ul>
+      <p class="hint">Les dièses valent aussi bémols (A# = B♭).</p>
+    </div>
   </div>
 </main>
 
@@ -462,13 +541,12 @@ function render(){
   $('roots').innerHTML = ROOTS.map(r =>
     `<button type="button" data-root="${r}" aria-pressed="${r===chord.root}">${r}</button>`).join('');
 
-  // 2. accords de la note choisie (masqué s'il n'y en a qu'un)
-  $('types').hidden = siblings.length < 2;
+  // 2. accords de la note choisie (toujours affiché, pour que la page ne bouge pas)
   $('types').innerHTML = siblings.map(c =>
     `<button type="button" data-chord="${c.id}" aria-pressed="${c.id===chord.id}">${c.label}</button>`).join('');
 
-  // 3. niveaux (masqués pour les accords sans progression)
-  $('levelsBox').hidden = !multi;
+  // 3. niveaux (masqués pour les accords sans progression ; la place reste réservée sur grand écran)
+  $('levelsBox').classList.toggle('off', !multi);
   $('hint').hidden = !multi;
   $('levels').innerHTML = multi ? chord.levels.map(l =>
     `<button type="button" data-level="${l.id}" aria-pressed="${l.id===level.id}">${l.name}</button>`).join('') : '';
@@ -562,9 +640,9 @@ const noteIndex = key => { const [i,f] = parseKey(key); return (OPEN_SEMITONE[i]
 const isShownNote = n => fb.notes === 'all' || !NOTE_NAMES[n].includes('#');
 const isQuiz = () => fb.mode === 'review' && fb.exercise === 'quiz';
 
-function drawFretboard(){
-  const { nut, cell, frets, top, gap, r } = FB;
-  const review = fb.mode === 'review' && fb.exercise === 'free';
+// fond du manche (frettes, cordes, numéros, repères) : partagé par les onglets Fretboard et Scales
+function boardSvg(frets = FB.frets){
+  const { nut, cell, top, gap } = FB;
   const right = nut + frets*cell;
   const bottom = top + 5*gap;
   let s = '';
@@ -588,6 +666,13 @@ function drawFretboard(){
     const marks = n === 12 ? [-8,8] : [3,5,7,9].includes(n) ? [0] : [];
     marks.forEach(dx => s += `<circle cx="${cx+dx}" cy="${bottom+66}" r="5" fill="#b9ad9b"/>`);
   }
+  return s;
+}
+
+function drawFretboard(){
+  const { nut, cell, frets, top, gap, r } = FB;
+  const review = fb.mode === 'review' && fb.exercise === 'free';
+  let s = boardSvg();
 
   // un rond par corde et par case (case 0 = corde à vide, à gauche du sillet)
   for (let i=5;i>=0;i--){
@@ -632,7 +717,7 @@ function renderFretboard(){
   $('fbNotation').innerHTML = segmented(FB_NOTATIONS, 'data-notation', fb.notation);
   $('fbNotes').innerHTML = segmented(FB_NOTES, 'data-notes', fb.notes);
   $('fbMode').innerHTML = segmented(FB_MODES, 'data-fbmode', fb.mode);
-  $('fbExerciseBox').hidden = !review;
+  $('fbExerciseBox').classList.toggle('off', !review);
   $('fbExercise').innerHTML = segmented(FB_EXERCISES, 'data-exercise', fb.exercise) +
     (fb.exercise === 'free'
       ? `<button type="button" class="ghost" data-clear ${fb.shown.size ? '' : 'disabled'}>Tout masquer</button>` : '');
@@ -686,13 +771,14 @@ function newQuestion(){
   quiz.status = 'ask';
 }
 
-// sur petit écran, amène le rond « ? » dans la partie visible du manche
-function scrollToTarget(){
-  const box = document.querySelector('.scroll'), el = $('fretboard').querySelector('.target');
+// sur petit écran, amène un rond dans la partie visible du manche
+function revealOnBoard(svgId, selector){
+  const box = $(svgId).parentElement, el = $(svgId).querySelector(selector);
   if (!el) return;
   const b = box.getBoundingClientRect(), t = el.getBoundingClientRect();
   if (t.left < b.left || t.right > b.right) box.scrollLeft += t.left - b.left - (b.width - t.width)/2;
 }
+const scrollToTarget = () => revealOnBoard('fretboard', '.target');
 
 function nextQuestion(){ newQuestion(); renderFretboard(); scrollToTarget(); }
 
@@ -769,6 +855,185 @@ $('fretboard').addEventListener('keydown', e => {
 });
 
 /* ============================================================
+   Scales — les gammes principales sur le manche
+   steps   : demi-tons au-dessus de la tonique
+   degrees : nom de chaque degré, dans le même ordre
+   ============================================================ */
+const SCALES = [
+  { id:'major', name:'Majeure', steps:[0,2,4,5,7,9,11], degrees:['1','2','3','4','5','6','7'],
+    desc:'La gamme de référence, au son clair et lumineux.' },
+  { id:'minor', name:'Mineure naturelle', steps:[0,2,3,5,7,8,10], degrees:['1','2','♭3','4','5','♭6','♭7'],
+    desc:'Un son plus sombre et mélancolique.' },
+  { id:'pentamaj', name:'Pentatonique majeure', steps:[0,2,4,7,9], degrees:['1','2','3','5','6'],
+    desc:'Cinq notes au son ouvert, très présentes en country, folk et pop.' },
+  { id:'pentamin', name:'Pentatonique mineure', steps:[0,3,5,7,10], degrees:['1','♭3','4','5','♭7'],
+    desc:'La gamme classique pour commencer à improviser en rock et en blues.' },
+  { id:'blues', name:'Blues', steps:[0,3,5,6,7,10], degrees:['1','♭3','4','♭5','5','♭7'],
+    desc:'La pentatonique mineure avec une note en plus, la « blue note » (♭5).' },
+  { id:'harmonic', name:'Mineure harmonique', steps:[0,2,3,5,7,8,11], degrees:['1','2','♭3','4','5','♭6','7'],
+    desc:'La mineure naturelle avec la 7e relevée, à la couleur orientale.' },
+  { id:'melodic', name:'Mineure mélodique', steps:[0,2,3,5,7,9,11], degrees:['1','2','♭3','4','5','6','7'],
+    desc:'La mineure avec 6e et 7e relevées (forme ascendante), courante en jazz.' }
+];
+const SC_DISPLAYS = [ ...FB_NOTATIONS, { id:'degrees', name:'Degrés' } ];
+const SC_MODES = [ { id:'board', name:'Tout le manche' }, { id:'play', name:'Play' } ];
+const SPEEDS = [ { id:1300, name:'Lent' }, { id:800, name:'Normal' }, { id:450, name:'Rapide' } ];   // ms par note
+// root : demi-ton de la tonique (C = 0, A = 9)
+const sc = { scale:'pentamin', root:9, display:'letters', mode:'board' };
+// player : step = index de la note en cours dans la séquence (-1 : pas commencé)
+const player = { step:-1, timer:null, speed:800 };
+
+/* ---------- position à jouer ---------- */
+const OPEN_PITCH = [0,5,10,15,19,24];     // hauteur de chaque corde à vide, en demi-tons au-dessus du E grave
+
+// Position qui part de la tonique sur la corde de E grave : on monte la gamme note par note
+// et on passe à la corde suivante dès que la note sort de la position (plus de 3 cases après la tonique).
+function buildPath(scale, root){
+  const start = (root - 4 + 12) % 12;     // case de la tonique sur le E grave
+  const top = start + 3;
+  const path = [];
+  let s = 0;
+  for (let pitch = start; ; pitch++){
+    if (!scale.steps.includes((pitch - start) % 12)) continue;
+    while (s < 5 && pitch - OPEN_PITCH[s] > top && pitch - OPEN_PITCH[s+1] >= 0) s++;
+    const f = pitch - OPEN_PITCH[s];
+    if (s === 5 && f > top) return path;
+    path.push({ s, f });
+  }
+}
+// aller puis retour (la note du sommet n'est jouée qu'une fois)
+const sequence = path => [...path, ...path.slice(0,-1).reverse()];
+const currentScale = () => SCALES.find(x => x.id === sc.scale);
+const currentPath = () => buildPath(currentScale(), sc.root);
+
+/* ---------- lecture ---------- */
+function pause(){ clearTimeout(player.timer); player.timer = null; }
+function resetPlayer(){ pause(); player.step = -1; }
+function goTo(step){
+  const last = sequence(currentPath()).length - 1;
+  player.step = Math.max(-1, Math.min(last, step));
+}
+function tick(){
+  goTo(player.step + 1);
+  const done = player.step >= sequence(currentPath()).length - 1;
+  if (done) pause(); else player.timer = setTimeout(tick, player.speed);
+  renderScales();
+  revealOnBoard('scaleBoard', '.current');
+}
+function togglePlay(){
+  if (player.timer){ pause(); renderScales(); return; }
+  if (player.step >= sequence(currentPath()).length - 1) player.step = -1;    // terminé : on repart du début
+  tick();
+}
+
+function renderScales(){
+  const scale = currentScale();
+  const solfege = sc.display === 'solfege';
+  const names = solfege ? SOLFEGE : NOTE_NAMES;
+  const playMode = sc.mode === 'play';
+  const path = playMode ? currentPath() : [];
+  const { nut, cell, top, gap, r } = FB;
+  // certaines positions montent au-delà de la case 12 : le manche s'allonge alors
+  const frets = Math.max(FB.frets, ...path.map(p => p.f));
+
+  $('scMode').innerHTML = segmented(SC_MODES, 'data-scmode', sc.mode);
+  $('scType').innerHTML = segmented(SCALES, 'data-scale', sc.scale);
+  const start = solfege ? 0 : 9;           // A B C commence à A ; Do Ré Mi commence à Do
+  $('scRoot').innerHTML = segmented(
+    Array.from({length:12}, (_,k) => (start + k) % 12).map(n => ({ id:n, name:names[n] })), 'data-root-note', sc.root);
+  $('scDisplay').innerHTML = segmented(SC_DISPLAYS, 'data-display', sc.display);
+
+  // un rond pour la note de la case f sur la corde i (rien si elle n'est pas dans la gamme)
+  // seules les notes de la gamme sont dessinées ; la tonique est en bleu, la note en cours est entourée
+  const dot = (i, f, current) => {
+    const n = (OPEN_SEMITONE[i] + f) % 12;
+    const k = scale.steps.indexOf((n - sc.root + 12) % 12);
+    if (k < 0) return '';
+    const isRoot = k === 0;
+    const cx = f === 0 ? nut - 40 : nut + (f-.5)*cell;
+    const cy = top + (5-i)*gap;
+    const label = sc.display === 'degrees' ? scale.degrees[k] : names[n];
+    const size = [0,21,19,17,15][label.length];
+    const fill = isRoot ? '#2563b0' : current ? 'var(--orange)' : 'var(--yellow)';
+    const stroke = current ? 'var(--line)' : isRoot ? '#2563b0' : 'var(--dot-stroke)';
+    return `<g class="note${isRoot ? ' root' : ''}${current ? ' current' : ''}">` +
+      `<circle cx="${cx}" cy="${cy}" r="${current ? r+3 : r}" fill="${fill}" stroke="${stroke}" stroke-width="${current ? 5 : 2}"/>` +
+      `<text x="${cx}" y="${cy + size*.36}" text-anchor="middle" font-size="${size}" font-weight="700" fill="${isRoot ? '#fff' : '#2b1a08'}">${label}</text></g>`;
+  };
+
+  let s = boardSvg(frets);
+  let current = null;
+  if (!playMode){
+    for (let i=5;i>=0;i--) for (let f=0;f<=frets;f++) s += dot(i, f, false);
+  } else {
+    // les notes apparaissent une à une à l'aller, puis restent affichées pendant le retour
+    current = sequence(path)[player.step] || null;
+    path.slice(0, player.step + 1).filter(p => p !== current).forEach(p => s += dot(p.s, p.f, false));
+    if (current) s += dot(current.s, current.f, true);
+  }
+  $('scaleBoard').setAttribute('viewBox', `0 0 ${880 + (frets - FB.frets)*cell} 384`);
+  $('scaleBoard').innerHTML = s;
+
+  $('player').hidden = $('plToggle').hidden = !playMode;
+  if (playMode){
+    const total = sequence(path).length;
+    const playing = player.timer !== null;
+    $('plToggle').textContent = playing ? '❚❚ Pause'
+      : player.step >= 0 && player.step < total - 1 ? '▶ Reprendre' : '▶ Play';
+    $('plPrev').disabled = player.step < 0;
+    $('plNext').disabled = player.step >= total - 1;
+    $('plSpeed').innerHTML = segmented(SPEEDS, 'data-speed', player.speed);
+    if (!current){
+      const list = path.map(p => p.f);
+      $('plMsg').textContent = `Position cases ${Math.min(...list)} à ${Math.max(...list)}, en partant de la tonique sur la corde 6. Appuie sur Play.`;
+    } else {
+      const name = names[(OPEN_SEMITONE[current.s] + current.f) % 12];
+      $('plMsg').textContent = `${player.step < path.length ? 'Aller' : 'Retour'} ${player.step + 1}/${total} · corde ${6 - current.s}, ${current.f === 0 ? 'à vide' : 'case ' + current.f} : ${name}`;
+    }
+  }
+
+  const title = `${names[sc.root]} · ${scale.name}`;
+  const notes = scale.steps.map(st => names[(sc.root + st) % 12]).join('  ·  ');
+  $('scTitle').textContent = title;
+  $('scaleBoard').setAttribute('aria-label', `Gamme ${title} sur le manche : ${notes}`);
+  $('scDesc').textContent = scale.desc;
+  $('scNotes').textContent = notes;
+  $('scSteps').textContent = scale.steps
+    .map((st,k) => ({1:'½', 2:'T', 3:'1½'})[(scale.steps[k+1] ?? 12) - st]).join('  –  ');
+  $('scLegend').innerHTML =
+    `<li>${dotIcon('#2563b0','')}tonique</li><li>${dotIcon('var(--yellow)','')}autres notes de la gamme</li>`;
+}
+
+$('scType').addEventListener('click', e => {
+  const b = e.target.closest('button[data-scale]'); if (!b) return;
+  sc.scale = b.dataset.scale; resetPlayer(); renderScales();
+});
+$('scRoot').addEventListener('click', e => {
+  const b = e.target.closest('button[data-root-note]'); if (!b) return;
+  sc.root = Number(b.dataset.rootNote); resetPlayer(); renderScales();
+});
+$('scMode').addEventListener('click', e => {
+  const b = e.target.closest('button[data-scmode]'); if (!b || b.dataset.scmode === sc.mode) return;
+  sc.mode = b.dataset.scmode; resetPlayer(); renderScales();
+});
+// après un changement de note : on la garde visible sur petit écran
+function showStep(){ renderScales(); revealOnBoard('scaleBoard', '.current'); }
+$('plToggle').addEventListener('click', () => { togglePlay(); revealOnBoard('scaleBoard', '.current'); });
+$('plPrev').addEventListener('click', () => { pause(); goTo(player.step - 1); showStep(); });
+$('plNext').addEventListener('click', () => { pause(); goTo(player.step + 1); showStep(); });
+$('plReset').addEventListener('click', () => { resetPlayer(); renderScales(); $('scaleBoard').parentElement.scrollLeft = 0; });
+$('plSpeed').addEventListener('click', e => {
+  const b = e.target.closest('button[data-speed]'); if (!b) return;
+  player.speed = Number(b.dataset.speed);
+  if (player.timer){ clearTimeout(player.timer); player.timer = setTimeout(tick, player.speed); }
+  renderScales();
+});
+$('scDisplay').addEventListener('click', e => {
+  const b = e.target.closest('button[data-display]'); if (!b) return;
+  sc.display = b.dataset.display; renderScales();
+});
+
+/* ============================================================
    Onglets et URL
    ============================================================ */
 let view = 'chords';
@@ -781,10 +1046,12 @@ function setView(v){
   view = v;
   $('viewChords').hidden = v !== 'chords';
   $('viewFret').hidden = v !== 'fretboard';
-  document.querySelector('main').classList.toggle('wide', v === 'fretboard');
+  $('viewScales').hidden = v !== 'scales';
+  if (v !== 'scales') pause();     // la lecture d'une gamme s'arrête quand on change d'onglet
   document.querySelectorAll('#views button').forEach(b =>
     b.setAttribute('aria-pressed', b.dataset.view === v));
   if (v === 'fretboard'){ setHash('fretboard'); renderFretboard(); scrollToTarget(); }
+  else if (v === 'scales'){ setHash('scales'); renderScales(); }
   else render();
 }
 
@@ -792,13 +1059,13 @@ $('views').addEventListener('click', e => {
   const b = e.target.closest('button[data-view]'); if (b) setView(b.dataset.view);
 });
 
-// état initial depuis l'URL (#Fs-l3, #Am-std, #fretboard)
+// état initial depuis l'URL (#Fs-l3, #Am-std, #fretboard, #scales)
 (function init(){
   const hash = location.hash.slice(1);
   const m = hash.match(/^([A-Za-z0-9]+)-(l\d|bar|std)$/);
   if (m){ state.chord = m[1]; if (m[2] !== 'std') state.pref = m[2]; }
   checkData();
-  setView(hash === 'fretboard' ? 'fretboard' : 'chords');
+  setView(hash === 'fretboard' || hash === 'scales' ? hash : 'chords');
 })();
 </script>
 </body>
