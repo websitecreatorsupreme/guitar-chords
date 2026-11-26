@@ -72,12 +72,39 @@
   .legend li{display:flex; align-items:center; gap:6px}
   .legend svg{width:22px; height:22px; flex:none}
   .hint{font-size:.8rem; color:var(--muted); margin:0}
+
+  /* onglets Accords / Fretboard */
+  main.wide{max-width:1000px}
+  .views{display:flex; gap:22px; margin-bottom:22px; border-bottom:2px solid var(--chip)}
+  .views button{
+    font:inherit; font-size:1rem; font-weight:700; padding:6px 2px 10px; margin-bottom:-2px; border:0;
+    border-bottom:3px solid transparent; background:none; color:var(--muted); cursor:pointer;
+  }
+  .views button[aria-pressed="true"]{color:var(--ink); border-bottom-color:var(--accent)}
+
+  /* fretboard */
+  .controls{display:flex; flex-wrap:wrap; column-gap:36px; align-items:flex-end}
+  .modes button.ghost{background:none; border:2px solid var(--chip-hover); padding:7px 14px}
+  .modes button.ghost:disabled{opacity:.4; cursor:default}
+  .scroll{overflow-x:auto}
+  .card #fretboard{max-width:none; min-width:700px; margin:0}
+  .cell.rev{cursor:pointer}
+  .cell.rev:hover circle{stroke:var(--accent); stroke-width:3.5}
+  .cell:focus{outline:none}
+  .cell:focus-visible circle{stroke:var(--line); stroke-width:4}
+  #fbHint{margin-top:14px}
 </style>
 </head>
 <body>
 <main>
   <h1>Guitar chords</h1>
 
+  <nav class="views" id="views" aria-label="Rubriques">
+    <button type="button" data-view="chords" aria-pressed="true">Accords</button>
+    <button type="button" data-view="fretboard" aria-pressed="false">Fretboard</button>
+  </nav>
+
+  <div id="viewChords">
   <div class="roots" id="roots" role="group" aria-label="Note"></div>
   <div class="types" id="types" role="group" aria-label="Accord"></div>
 
@@ -99,6 +126,26 @@
     <div><p class="label">Frettes (E A D G B e)</p><div class="tab" id="tab"></div></div>
     <ul class="legend" id="legend"></ul>
     <p class="hint" id="hint">Astuce : les flèches ← → changent de niveau.</p>
+  </div>
+  </div><!-- /viewChords -->
+
+  <div id="viewFret" hidden>
+    <div class="controls">
+      <div>
+        <p class="label">Notation</p>
+        <div class="modes" id="fbNotation" role="group" aria-label="Notation"></div>
+      </div>
+      <div>
+        <p class="label">Mode</p>
+        <div class="modes" id="fbMode" role="group" aria-label="Mode"></div>
+      </div>
+    </div>
+    <section class="card">
+      <div class="scroll">
+        <svg id="fretboard" viewBox="0 0 880 384" role="group" aria-label="Manche de guitare, cases 0 à 12"></svg>
+      </div>
+    </section>
+    <p class="hint" id="fbHint"></p>
   </div>
 </main>
 
@@ -413,7 +460,7 @@ function render(){
     STRING_NAMES.map(n => `<span class="names">${n}</span>`).join('') +
     level.frets.map(f => `<span class="fr">${f}</span>`).join('');
 
-  try { history.replaceState(null, '', `#${chord.id}-${level.id}`); } catch(e){}
+  if (view === 'chords') setHash(`${chord.id}-${level.id}`);
 }
 
 const dotIcon = (fill, txt) =>
@@ -457,6 +504,7 @@ $('levels').addEventListener('click', e => {
   state.pref = b.dataset.level; render();
 });
 document.addEventListener('keydown', e => {
+  if (view !== 'chords') return;     // sur le fretboard, les flèches font défiler le manche
   if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
   const chord = chordById(state.chord);
   if (chord.levels.length < 2) return;
@@ -466,12 +514,139 @@ document.addEventListener('keydown', e => {
   if (j !== i){ state.pref = chord.levels[j].id; render(); }
 });
 
-// état initial depuis l'URL (#Fs-l3, #Am-std)
+/* ============================================================
+   Fretboard — apprendre les notes du manche
+   ============================================================ */
+const FB = { nut:110, cell:62, frets:12, top:40, gap:52, r:22 };
+const FB_NOTATIONS = MODES.filter(m => m.id !== 'fingers');       // A B C / Do Ré Mi
+const FB_MODES = [ { id:'see', name:'Toutes les notes' }, { id:'review', name:'Révision' } ];
+// shown : ronds révélés en mode révision, sous la forme "corde-case"
+const fb = { notation:'letters', mode:'see', shown:new Set() };
+
+function drawFretboard(){
+  const { nut, cell, frets, top, gap, r } = FB;
+  const review = fb.mode === 'review';
+  const right = nut + frets*cell;
+  const bottom = top + 5*gap;
+  let s = '';
+
+  // frettes puis sillet
+  for (let n=1;n<=frets;n++)
+    s += `<line x1="${nut+n*cell}" x2="${nut+n*cell}" y1="${top}" y2="${bottom}" stroke="#a89c8a" stroke-width="2.5"/>`;
+  s += `<line x1="${nut}" x2="${nut}" y1="${top-2}" y2="${bottom+2}" stroke="var(--line)" stroke-width="8" stroke-linecap="round"/>`;
+
+  // cordes (aiguë en haut, grave en bas) + numéros 1 à 6
+  [1.2,1.6,2.1,2.7,3.3,4].forEach((w,row) => {
+    const y = top + row*gap;
+    s += `<line x1="44" x2="${right}" y1="${y}" y2="${y}" stroke="var(--line)" stroke-width="${w}"/>`;
+    s += `<text x="22" y="${y+6}" text-anchor="middle" font-size="16" fill="#7a6e61">${row+1}</text>`;
+  });
+
+  // numéros de cases et repères du manche
+  for (let n=1;n<=frets;n++){
+    const cx = nut + (n-.5)*cell;
+    s += `<text x="${cx}" y="${bottom+48}" text-anchor="middle" font-size="18" fill="#7a6e61">${n}</text>`;
+    const marks = n === 12 ? [-8,8] : [3,5,7,9].includes(n) ? [0] : [];
+    marks.forEach(dx => s += `<circle cx="${cx+dx}" cy="${bottom+66}" r="5" fill="#b9ad9b"/>`);
+  }
+
+  // un rond par corde et par case (case 0 = corde à vide, à gauche du sillet)
+  for (let i=5;i>=0;i--){
+    const cy = top + (5-i)*gap;
+    for (let f=0;f<=frets;f++){
+      const cx = f === 0 ? nut - 40 : nut + (f-.5)*cell;
+      const key = `${i}-${f}`;
+      const note = noteAt(i, f, fb.notation);
+      const visible = !review || fb.shown.has(key);
+      const fill = !visible ? '#f2ede4' : note.includes('#') ? 'var(--orange)' : 'var(--yellow)';
+      const stroke = visible ? 'var(--dot-stroke)' : '#bfb29e';
+      const where = `Corde ${6-i}, ${f === 0 ? 'à vide' : 'case ' + f}`;
+      const attrs = review
+        ? `class="cell rev" data-key="${key}" tabindex="0" role="button" aria-pressed="${visible}" aria-label="${where}${visible ? ' : ' + note : ' : note masquée'}"`
+        : `class="cell" aria-label="${where} : ${note}"`;
+      const size = [0,21,19,17,15][note.length];
+      s += `<g ${attrs}><circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="2"/>` +
+        (visible ? `<text x="${cx}" y="${cy + size*.36}" text-anchor="middle" font-size="${size}" font-weight="700" fill="#2b1a08">${note}</text>` : '') +
+        `</g>`;
+    }
+  }
+  $('fretboard').innerHTML = s;
+}
+
+function renderFretboard(){
+  $('fbNotation').innerHTML = FB_NOTATIONS.map(n =>
+    `<button type="button" data-notation="${n.id}" aria-pressed="${n.id===fb.notation}">${n.name}</button>`).join('');
+  $('fbMode').innerHTML = FB_MODES.map(m =>
+    `<button type="button" data-fbmode="${m.id}" aria-pressed="${m.id===fb.mode}">${m.name}</button>`).join('') +
+    (fb.mode === 'review'
+      ? `<button type="button" class="ghost" data-clear ${fb.shown.size ? '' : 'disabled'}>Tout masquer</button>` : '');
+  $('fbHint').textContent = fb.mode === 'review'
+    ? 'Clique sur un rond pour révéler sa note, reclique pour la cacher. Corde 1 = e aiguë (en haut), corde 6 = E grave (en bas).'
+    : 'Cases 0 (à vide) à 12 ; au-delà, les notes recommencent. Corde 1 = e aiguë (en haut), corde 6 = E grave (en bas).';
+  drawFretboard();
+}
+
+function toggleCell(key){
+  if (!fb.shown.delete(key)) fb.shown.add(key);
+  renderFretboard();
+}
+
+$('fbNotation').addEventListener('click', e => {
+  const b = e.target.closest('button[data-notation]'); if (!b) return;
+  fb.notation = b.dataset.notation; renderFretboard();     // les ronds révélés le restent
+});
+$('fbMode').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.hasAttribute('data-clear')) fb.shown.clear();
+  else if (b.dataset.fbmode !== fb.mode){
+    fb.mode = b.dataset.fbmode;
+    fb.shown.clear();                                      // chaque révision démarre à vide
+  }
+  renderFretboard();
+});
+$('fretboard').addEventListener('click', e => {
+  const c = e.target.closest('.cell.rev'); if (c) toggleCell(c.dataset.key);
+});
+$('fretboard').addEventListener('keydown', e => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const c = e.target.closest('.cell.rev'); if (!c) return;
+  e.preventDefault();
+  const key = c.dataset.key;
+  toggleCell(key);
+  $('fretboard').querySelector(`[data-key="${key}"]`).focus();
+});
+
+/* ============================================================
+   Onglets et URL
+   ============================================================ */
+let view = 'chords';
+
+function setHash(h){
+  try { history.replaceState(null, '', '#' + h); } catch(e){}
+}
+
+function setView(v){
+  view = v;
+  $('viewChords').hidden = v !== 'chords';
+  $('viewFret').hidden = v !== 'fretboard';
+  document.querySelector('main').classList.toggle('wide', v === 'fretboard');
+  document.querySelectorAll('#views button').forEach(b =>
+    b.setAttribute('aria-pressed', b.dataset.view === v));
+  if (v === 'fretboard'){ setHash('fretboard'); renderFretboard(); }
+  else render();
+}
+
+$('views').addEventListener('click', e => {
+  const b = e.target.closest('button[data-view]'); if (b) setView(b.dataset.view);
+});
+
+// état initial depuis l'URL (#Fs-l3, #Am-std, #fretboard)
 (function init(){
-  const m = location.hash.slice(1).match(/^([A-Za-z0-9]+)-(l\d|bar|std)$/);
+  const hash = location.hash.slice(1);
+  const m = hash.match(/^([A-Za-z0-9]+)-(l\d|bar|std)$/);
   if (m){ state.chord = m[1]; if (m[2] !== 'std') state.pref = m[2]; }
   checkData();
-  render();
+  setView(hash === 'fretboard' ? 'fretboard' : 'chords');
 })();
 </script>
 </body>
