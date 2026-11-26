@@ -26,9 +26,9 @@
     line-height:1.45; -webkit-font-smoothing:antialiased;
   }
   html{scrollbar-gutter:stable}   /* la barre de défilement ne décale pas la page d'un onglet à l'autre */
-  main{max-width:1000px; margin:0 auto; padding:28px 16px 48px}   /* même largeur sur tous les onglets */
-  h1{font-size:1.5rem; margin:0 0 20px; letter-spacing:-.01em}
-  .label{font-size:.72rem; text-transform:uppercase; letter-spacing:.09em; color:var(--muted); margin:0 0 8px}
+  main{max-width:1200px; margin:0 auto; padding:14px 20px 16px}   /* même largeur sur tous les onglets */
+  h1{font-size:1.4rem; margin:0; letter-spacing:-.01em}
+  .label{font-size:.72rem; text-transform:uppercase; letter-spacing:.09em; color:var(--muted); margin:0 0 6px}
 
   /* 1. notes */
   .roots{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:16px}
@@ -41,7 +41,7 @@
   .roots button[aria-pressed="true"]{background:var(--accent); color:var(--accent-ink)}
 
   /* 2. accords de la note */
-  .types{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:18px}
+  .types{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px}
   .types button{
     font:inherit; font-size:.95rem; font-weight:600; padding:8px 15px; border:2px solid transparent; border-radius:999px;
     background:var(--chip); color:var(--ink); cursor:pointer; transition:background .15s;
@@ -50,7 +50,7 @@
   .types button[aria-pressed="true"]{background:var(--root-bg); color:var(--root-ink); border-color:var(--accent)}
 
   /* 3. niveaux  +  4. mode d'affichage */
-  .levels,.modes{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px}
+  .levels,.modes{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px}
   .levels button,.modes button{
     font:inherit; font-size:.95rem; font-weight:600; padding:9px 16px; border:0; border-radius:999px;
     background:var(--chip); color:var(--ink); cursor:pointer; transition:background .15s;
@@ -74,8 +74,10 @@
   .legend svg{width:22px; height:22px; flex:none}
   .hint{font-size:.8rem; color:var(--muted); margin:0}
 
-  /* onglets Accords / Fretboard */
-  .views{display:flex; gap:22px; margin-bottom:22px; border-bottom:2px solid var(--chip)}
+  /* titre et onglets sur la même ligne */
+  .topbar{display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:6px 24px; margin-bottom:14px; border-bottom:2px solid var(--chip)}
+  .topbar h1{padding-bottom:6px}
+  .views{display:flex; gap:22px}
   .views button{
     font:inherit; font-size:1rem; font-weight:700; padding:6px 2px 10px; margin-bottom:-2px; border:0;
     border-bottom:3px solid transparent; background:none; color:var(--muted); cursor:pointer;
@@ -83,99 +85,115 @@
   .views button[aria-pressed="true"]{color:var(--ink); border-bottom-color:var(--accent)}
 
   /* fretboard */
-  /* deux colonnes fixes : le manche ne bouge pas quand un réglage apparaît */
-  .controls{display:grid; grid-template-columns:repeat(2,max-content); column-gap:36px; align-items:end}
+  /* tous les réglages sur une même ligne quand la largeur le permet */
+  .controls{display:flex; flex-wrap:wrap; column-gap:28px; align-items:flex-end}
+  .controls .modes button{padding-left:14px; padding-right:14px}
   .modes button.ghost{background:none; border:2px solid var(--chip-hover); padding:7px 14px}
-  .modes button.ghost:disabled{opacity:.4; cursor:default}
+  .controls .mode-box{flex:0 0 auto; min-width:450px}   /* « Tout masquer » apparaît sans faire bouger le manche */
   .scroll{overflow-x:auto}
   .card svg.board{max-width:none; min-width:700px; margin:0}
   .cell.rev{cursor:pointer}
   .cell.rev:hover circle{stroke:var(--accent); stroke-width:3.5}
   .cell:focus{outline:none}
   .cell:focus-visible circle{stroke:var(--line); stroke-width:4}
-  #fbHint{margin-top:14px}
+  #fbHint{margin-top:10px}
 
-  /* quiz */
-  .quiz-msg{margin:18px 0 12px; font-size:1.15rem; font-weight:600}
-  .answers{display:grid; grid-template-columns:repeat(auto-fill,minmax(62px,1fr)); gap:8px; max-width:640px}
-  .answers button{
-    font:inherit; font-size:1.05rem; font-weight:700; padding:12px 0; border:0; border-radius:12px;
-    background:var(--chip); color:var(--ink); cursor:pointer;
-  }
-  .answers button:hover:enabled{background:var(--chip-hover)}
-  .answers button:disabled{cursor:default; opacity:.45}
-  .answers button.wrong{background:#b23b3b; color:#fff; opacity:.7}
-  .answers button.right{background:#2e8540; color:#fff; opacity:1}
-  .quiz-bar{display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:10px; margin-top:16px; max-width:640px; font-weight:600}
-  .quiz-bar .modes{margin:0}
+  /* lecture d'une gamme : mêmes pastilles que les filtres, avec une icône */
+  .modes button svg{width:14px; height:14px; margin-right:7px; vertical-align:-2px; fill:currentColor}
+  .modes button.play{min-width:108px}
+  .modes button.icon{padding:9px 13px}
+  .modes button.icon svg{width:17px; height:17px; margin:0; vertical-align:-3px}
+  .modes button svg.line{fill:none; stroke:currentColor; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round}
+  .controls .lecture{flex:1 1 360px}
+  .modes.speeds{margin:0 0 0 auto; flex-wrap:nowrap}   /* vitesses alignées à droite */
+  #viewScales .card h2{font-size:1.3rem}
+  #scDesc{margin-top:12px}
 
-  /* lecture d'une gamme */
-  .player{margin-top:16px}
-  .player .modes{margin-bottom:10px; align-items:center}
-  /* bouton Play dans l'en-tête de la carte : visible avec le manche, sans rien décaler */
-  .card.stage{position:relative}
-  .play{
-    position:absolute; top:12px; right:14px; min-width:130px; border:0; border-radius:999px; padding:10px 16px;
-    font:inherit; font-weight:700; background:var(--accent); color:var(--accent-ink); cursor:pointer;
+  /* onglet Chords : notes et accords en haut ; diagramme à gauche (2/3) ; notation, niveaux et légende à droite (1/3) */
+  #viewChords .roots{grid-template-columns:repeat(8,minmax(0,1fr)); margin-bottom:12px}
+  #viewChords .roots button{font-size:1.3rem; padding:8px 0}
+  .chords-layout{
+    display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1fr); column-gap:28px; align-items:start;
+    grid-template-areas:"figure display" "figure levels" "figure info"; grid-template-rows:auto auto 1fr;
   }
-  .play:hover{filter:brightness(1.07)}
-  .modes .sep{width:12px}
-  .player-msg{margin:0; font-size:1.1rem; font-weight:600; min-height:1.6em}
-
-  /* onglet Accords : filtres à gauche, diagramme à droite */
-  .chords-layout{display:grid; grid-template-columns:300px minmax(0,1fr); column-gap:28px; align-items:start}
-  .chords-layout .roots button{font-size:1.35rem}
-  .chords-layout .info{margin-bottom:0}
-  @media (min-width:700px){
-    /* hauteurs réservées (2 rangées de boutons) pour que rien ne saute d'un accord à l'autre */
-    .chords-layout .types{min-height:92px; align-content:flex-start}
-    .chords-layout .levels{min-height:90px; align-content:flex-start}
-    .off{visibility:hidden}
-  }
+  .chords-layout .figure{grid-area:figure}
+  .chords-layout #levelsBox{grid-area:levels}
+  .chords-layout .info{grid-area:info}
+  #viewChords .levels{flex-wrap:nowrap; gap:6px; margin-bottom:14px}
+  #viewChords .levels button{flex:1; padding:9px 0}
+  .chords-layout .card{padding:10px 8px}
+  .chords-layout .card svg{max-width:100%; max-height:420px}
+  .chords-layout .display-box{grid-area:display}
+  #viewChords .display-box .modes{flex-wrap:nowrap; gap:6px; margin-bottom:14px}
+  #viewChords .display-box .modes button{flex:1 1 auto; padding:9px 6px; white-space:nowrap}
+  .chords-layout .info{margin-top:0; gap:12px; align-content:start}
+  .chords-layout .tab{grid-template-columns:repeat(6,minmax(0,2.4rem))}
+  .chords-layout .legend{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px 10px}
+  /* accord sans niveaux : le bloc disparaît, les frettes et la légende remontent */
+  .chords-layout .off{display:none}
   @media (max-width:699px){
-    .chords-layout,.controls{grid-template-columns:minmax(0,1fr)}
-    .off{display:none}
-    .play{position:static; display:block; margin:10px auto 4px}
+    #viewChords .roots{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .chords-layout{grid-template-columns:minmax(0,1fr)}
+    /* sur téléphone, notation et niveaux restent au-dessus du diagramme */
+    .chords-layout{grid-template-areas:"display" "levels" "figure" "info"; grid-template-rows:none}
+    .controls .mode-box{min-width:0}
+    .chords-layout .info{margin-top:22px}
+    .chords-layout .card svg{max-height:380px}
+  }
+
+  /* grand écran : chaque onglet tient dans la fenêtre sans défiler, le visuel prend la place restante */
+  @media (min-width:700px) and (min-height:600px){
+    main{height:100vh; height:100dvh; display:flex; flex-direction:column}
+    #viewChords,#viewFret,#viewScales{flex:1; min-height:0; display:flex; flex-direction:column}
+
+    #viewFret .card,#viewScales .card{flex:1 1 0; min-height:190px; max-height:520px; display:flex; flex-direction:column; padding:10px 8px}
+    .card .scroll{flex:1; min-height:0; position:relative; overflow:hidden}
+    .card svg.board{position:absolute; inset:0; width:100%; height:100%; min-width:0}
+
+    .chords-layout{flex:1; min-height:0; grid-template-rows:auto auto minmax(0,1fr)}
+    .chords-layout .figure{align-self:stretch; min-height:0; display:flex; flex-direction:column}
+    .chords-layout .card{flex:1 1 0; min-height:200px; max-height:540px; position:relative}
+    .chords-layout .card svg{position:absolute; top:10px; left:8px; width:calc(100% - 16px); height:calc(100% - 20px); max-width:none; max-height:none}
   }
 </style>
 </head>
 <body>
 <main>
-  <h1>Guitar chords</h1>
+  <header class="topbar">
+    <h1>Guitar chords</h1>
+    <nav class="views" id="views" aria-label="Rubriques">
+      <button type="button" data-view="chords" aria-pressed="true">Chords</button>
+      <button type="button" data-view="fretboard" aria-pressed="false">Fretboard</button>
+      <button type="button" data-view="scales" aria-pressed="false">Scales</button>
+    </nav>
+  </header>
 
-  <nav class="views" id="views" aria-label="Rubriques">
-    <button type="button" data-view="chords" aria-pressed="true">Accords</button>
-    <button type="button" data-view="fretboard" aria-pressed="false">Fretboard</button>
-    <button type="button" data-view="scales" aria-pressed="false">Scales</button>
-  </nav>
+  <div id="viewChords">
+    <div class="roots" id="roots" role="group" aria-label="Note"></div>
+    <div class="types" id="types" role="group" aria-label="Accord"></div>
 
-  <div id="viewChords" class="chords-layout">
-  <div><!-- filtres -->
-  <div class="roots" id="roots" role="group" aria-label="Note"></div>
-  <div class="types" id="types" role="group" aria-label="Accord"></div>
+    <div class="chords-layout">
+      <div class="display-box">
+        <p class="label">Notation</p>
+        <div class="modes" id="modes" role="group" aria-label="Notation"></div>
+      </div>
 
-  <div id="levelsBox">
-    <p class="label">Niveau</p>
-    <div class="levels" id="levels" role="group" aria-label="Niveau de difficulté"></div>
-  </div>
+      <div id="levelsBox">
+        <p class="label">Niveau</p>
+        <div class="levels" id="levels" role="group" aria-label="Niveau de difficulté"></div>
+      </div>
 
-  <p class="label">Affichage</p>
-  <div class="modes" id="modes" role="group" aria-label="Contenu des pastilles"></div>
-  </div>
+      <div class="figure"><!-- diagramme -->
+        <section class="card" aria-live="polite">
+          <svg id="diagram" viewBox="0 24 360 354" role="img"></svg>
+        </section>
+      </div>
 
-  <div><!-- diagramme -->
-  <section class="card" aria-live="polite">
-    <h2 id="title"></h2>
-    <svg id="diagram" viewBox="0 0 360 400" role="img"></svg>
-  </section>
-
-  <div class="info">
-    <p class="tip" id="tip"></p>
-    <div><p class="label">Frettes (E A D G B e)</p><div class="tab" id="tab"></div></div>
-    <ul class="legend" id="legend"></ul>
-    <p class="hint" id="hint">Astuce : les flèches ← → changent de niveau.</p>
-  </div>
-  </div>
+      <div class="info"><!-- frettes et légende -->
+        <div><p class="label">Frettes (E A D G B e)</p><div class="tab" id="tab"></div></div>
+        <ul class="legend" id="legend"></ul>
+      </div>
+    </div>
   </div><!-- /viewChords -->
 
   <div id="viewFret" hidden>
@@ -188,13 +206,9 @@
         <p class="label">Notes affichées</p>
         <div class="modes" id="fbNotes" role="group" aria-label="Notes affichées"></div>
       </div>
-      <div>
+      <div class="mode-box">
         <p class="label">Mode</p>
         <div class="modes" id="fbMode" role="group" aria-label="Mode"></div>
-      </div>
-      <div id="fbExerciseBox" class="off">
-        <p class="label">Type de révision</p>
-        <div class="modes" id="fbExercise" role="group" aria-label="Type de révision"></div>
       </div>
     </div>
     <section class="card">
@@ -202,14 +216,6 @@
         <svg id="fretboard" class="board" viewBox="0 0 880 384" role="group" aria-label="Manche de guitare, cases 0 à 12"></svg>
       </div>
     </section>
-    <div id="quiz" hidden>
-      <p class="quiz-msg" id="quizMsg" aria-live="polite"></p>
-      <div class="answers" id="quizAnswers" role="group" aria-label="Réponses"></div>
-      <div class="quiz-bar">
-        <span id="quizScore"></span>
-        <div class="modes" id="quizActions"></div>
-      </div>
-    </div>
     <p class="hint" id="fbHint"></p>
   </div>
 
@@ -220,41 +226,30 @@
     <div class="types" id="scRoot" role="group" aria-label="Tonique"></div>
     <div class="controls">
       <div>
-        <p class="label">Affichage</p>
-        <div class="modes" id="scDisplay" role="group" aria-label="Contenu des ronds"></div>
+        <p class="label">Notation</p>
+        <div class="modes" id="scDisplay" role="group" aria-label="Notation"></div>
       </div>
-      <div>
-        <p class="label">Mode</p>
-        <div class="modes" id="scMode" role="group" aria-label="Mode"></div>
+      <div class="lecture">
+        <p class="label">Lecture</p>
+        <div class="modes">
+          <button type="button" class="play" id="plToggle" aria-pressed="false">Play</button>
+          <button type="button" class="icon" id="plReset" aria-label="Recommencer" title="Recommencer" hidden>
+            <svg class="line" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 4v6h6M3.5 15a9 9 0 1 0 2.1-9.4L1 10"/></svg>
+          </button>
+          <button type="button" class="ghost" id="plStop" hidden>Stop</button>
+          <span class="modes speeds" id="plSpeed" role="group" aria-label="Vitesse" hidden></span>
+        </div>
       </div>
     </div>
 
-    <section class="card stage">
+    <section class="card">
       <h2 id="scTitle"></h2>
-      <button type="button" class="play" id="plToggle" hidden>▶ Play</button>
       <div class="scroll">
         <svg id="scaleBoard" class="board" viewBox="0 0 880 384" role="img"></svg>
       </div>
     </section>
 
-    <div class="player" id="player" hidden>
-      <div class="modes">
-        <button type="button" id="plPrev">Note précédente</button>
-        <button type="button" id="plNext">Note suivante</button>
-        <button type="button" id="plReset">Recommencer</button>
-        <span class="sep"></span>
-        <span id="plSpeed" class="modes" role="group" aria-label="Vitesse" style="margin:0"></span>
-      </div>
-      <p class="player-msg" id="plMsg" aria-live="polite"></p>
-    </div>
-
-    <div class="info">
-      <p class="tip" id="scDesc"></p>
-      <div><p class="label">Notes de la gamme</p><p class="tip" id="scNotes"></p></div>
-      <div><p class="label">Intervalles (T = ton, ½ = demi-ton)</p><p class="tip" id="scSteps"></p></div>
-      <ul class="legend" id="scLegend"></ul>
-      <p class="hint">Les dièses valent aussi bémols (A# = B♭).</p>
-    </div>
+    <p class="tip" id="scDesc"></p>
   </div>
 </main>
 
@@ -547,9 +542,8 @@ function render(){
 
   // 3. niveaux (masqués pour les accords sans progression ; la place reste réservée sur grand écran)
   $('levelsBox').classList.toggle('off', !multi);
-  $('hint').hidden = !multi;
   $('levels').innerHTML = multi ? chord.levels.map(l =>
-    `<button type="button" data-level="${l.id}" aria-pressed="${l.id===level.id}">${l.name}</button>`).join('') : '';
+    `<button type="button" data-level="${l.id}" aria-label="${l.name}" aria-pressed="${l.id===level.id}">${l.id === 'bar' ? 'Bar' : l.id.slice(1)}</button>`).join('') : '';
 
   // 4. mode d'affichage
   $('modes').innerHTML = MODES.map(m =>
@@ -557,13 +551,11 @@ function render(){
 
   // diagramme
   const title = multi ? `${chord.label} ${level.name}` : chord.label;
-  $('title').textContent = title;
   $('diagram').setAttribute('aria-label', `Diagramme de ${title}`);
   drawDiagram(chord, level, state.mode);
   renderLegend(state.mode);
 
   // infos
-  $('tip').textContent = level.tip;
   $('tab').innerHTML =
     STRING_NAMES.map(n => `<span class="names">${n}</span>`).join('') +
     level.frets.map(f => `<span class="fr">${f}</span>`).join('');
@@ -627,18 +619,15 @@ document.addEventListener('keydown', e => {
    ============================================================ */
 const FB = { nut:110, cell:62, frets:12, top:40, gap:52, r:22 };
 const FB_NOTATIONS = MODES.filter(m => m.id !== 'fingers');       // A B C / Do Ré Mi
-const FB_MODES = [ { id:'see', name:'Toutes les notes' }, { id:'review', name:'Révision' } ];
-const FB_NOTES = [ { id:'all', name:'Toutes' }, { id:'naturals', name:'Naturelles seulement' } ];
-const FB_EXERCISES = [ { id:'free', name:'Libre' }, { id:'quiz', name:'Quiz' } ];
-// shown : ronds révélés en révision libre, sous la forme "corde-case"
-const fb = { notation:'letters', notes:'all', mode:'see', exercise:'free', shown:new Set() };
-// quiz : target = "corde-case" ; status = 'ask' | 'found' | 'revealed'
-const quiz = { target:null, wrong:new Set(), status:'ask', score:0, total:0, timer:null };
+const FB_MODES = [ { id:'see', name:'Normal' }, { id:'manual', name:'Manuel' }, { id:'random', name:'Aléatoire' } ];
+const FB_NOTES = [ { id:'all', name:'Toutes' }, { id:'naturals', name:'Naturelles' } ];
+// shown : ronds révélés en mode Manuel, sous la forme "corde-case"
+// target / revealed : rond tiré au sort en mode Aléatoire, et réponse affichée ou non
+const fb = { notation:'letters', notes:'all', mode:'see', shown:new Set(), target:null, revealed:false };
 
 const parseKey = key => key.split('-').map(Number);                      // [corde, case]
 const noteIndex = key => { const [i,f] = parseKey(key); return (OPEN_SEMITONE[i] + f) % 12; };
 const isShownNote = n => fb.notes === 'all' || !NOTE_NAMES[n].includes('#');
-const isQuiz = () => fb.mode === 'review' && fb.exercise === 'quiz';
 
 // fond du manche (frettes, cordes, numéros, repères) : partagé par les onglets Fretboard et Scales
 function boardSvg(frets = FB.frets){
@@ -671,7 +660,7 @@ function boardSvg(frets = FB.frets){
 
 function drawFretboard(){
   const { nut, cell, frets, top, gap, r } = FB;
-  const review = fb.mode === 'review' && fb.exercise === 'free';
+  const manual = fb.mode === 'manual';
   let s = boardSvg();
 
   // un rond par corde et par case (case 0 = corde à vide, à gauche du sillet)
@@ -682,24 +671,22 @@ function drawFretboard(){
       const key = `${i}-${f}`;
       if (!isShownNote(noteIndex(key))) continue;
       const note = noteAt(i, f, fb.notation);
-      const target = isQuiz() && key === quiz.target;
-      const visible = fb.mode === 'see' || (review && fb.shown.has(key)) || (target && quiz.status !== 'ask');
+      const target = fb.mode === 'random' && key === fb.target;
+      const visible = fb.mode === 'see' || (manual && fb.shown.has(key)) || (target && fb.revealed);
       let fill = !visible ? '#f2ede4' : note.includes('#') ? 'var(--orange)' : 'var(--yellow)';
       let stroke = visible ? 'var(--dot-stroke)' : '#bfb29e';
       let label = visible ? note : '';
       let ink = '#2b1a08';
-      if (target){                      // bleu : question en cours ou réponse donnée ; vert : trouvé
-        fill = stroke = quiz.status === 'found' ? '#2e8540' : '#2563b0';
+      if (target){                      // rond tiré au sort : bleu, « ? » puis la réponse
+        fill = stroke = '#2563b0';
         ink = '#fff';
-        label = quiz.status === 'ask' ? '?' : note;
+        label = fb.revealed ? note : '?';
       }
       const where = `Corde ${6-i}, ${f === 0 ? 'à vide' : 'case ' + f}`;
       const said = visible ? note : 'note masquée';
-      const attrs = review
-        ? `class="cell rev" data-key="${key}" tabindex="0" role="button" aria-pressed="${visible}" aria-label="${where} : ${said}"`
-        : target
-          ? `class="cell target" aria-label="Question : ${where}"`
-          : `class="cell" aria-label="${where} : ${said}"`;
+      const attrs = manual || target
+        ? `class="cell rev${target ? ' target' : ''}" data-key="${key}" tabindex="0" role="button" aria-pressed="${visible}" aria-label="${where} : ${said}"`
+        : `class="cell" aria-label="${where} : ${said}"`;
       const size = label === '?' ? 27 : [0,21,19,17,15][label.length];
       s += `<g ${attrs}><circle cx="${cx}" cy="${cy}" r="${target ? r+2 : r}" fill="${fill}" stroke="${stroke}" stroke-width="2"/>` +
         (label ? `<text x="${cx}" y="${cy + size*.36}" text-anchor="middle" font-size="${size}" font-weight="700" fill="${ink}">${label}</text>` : '') +
@@ -713,62 +700,32 @@ const segmented = (list, attr, current) => list.map(o =>
   `<button type="button" ${attr}="${o.id}" aria-pressed="${o.id===current}">${o.name}</button>`).join('');
 
 function renderFretboard(){
-  const review = fb.mode === 'review';
   $('fbNotation').innerHTML = segmented(FB_NOTATIONS, 'data-notation', fb.notation);
   $('fbNotes').innerHTML = segmented(FB_NOTES, 'data-notes', fb.notes);
-  $('fbMode').innerHTML = segmented(FB_MODES, 'data-fbmode', fb.mode);
-  $('fbExerciseBox').classList.toggle('off', !review);
-  $('fbExercise').innerHTML = segmented(FB_EXERCISES, 'data-exercise', fb.exercise) +
-    (fb.exercise === 'free'
-      ? `<button type="button" class="ghost" data-clear ${fb.shown.size ? '' : 'disabled'}>Tout masquer</button>` : '');
-  $('quiz').hidden = !isQuiz();
-  if (isQuiz()) renderQuiz();
+  // « Tout masquer » n'apparaît que s'il y a quelque chose à masquer
+  $('fbMode').innerHTML = segmented(FB_MODES, 'data-fbmode', fb.mode) +
+    (fb.mode === 'manual' && fb.shown.size
+      ? '<button type="button" class="ghost" data-clear>Tout masquer</button>' : '');
 
-  const intro = !review ? 'Cases 0 (à vide) à 12 ; au-delà, les notes recommencent.'
-    : isQuiz() ? 'Trouve la note du rond « ? ». Le score compte les réponses justes du premier coup.'
-    : 'Clique sur un rond pour révéler sa note, reclique pour la cacher.';
+  const intro = {
+    see: 'Cases 0 (à vide) à 12 ; au-delà, les notes recommencent.',
+    manual: 'Clique sur un rond pour révéler sa note, reclique pour la cacher.',
+    random: 'Clique sur « ? » pour voir la réponse, puis reclique dessus pour une autre note.'
+  }[fb.mode];
   $('fbHint').textContent = intro + ' Corde 1 = e aiguë (en haut), corde 6 = E grave (en bas).' +
     (fb.notes === 'naturals' ? ' Les dièses et bémols sont masqués.' : '');
   drawFretboard();
 }
 
-/* ---------- quiz ---------- */
-function renderQuiz(){
-  const names = fb.notation === 'solfege' ? SOLFEGE : NOTE_NAMES;
-  const good = noteIndex(quiz.target);
-  const [i,f] = parseKey(quiz.target);
-  const asking = quiz.status === 'ask';
-
-  $('quizMsg').textContent =
-    quiz.status === 'found' ? `Bravo, c’est ${names[good]} !`
-    : quiz.status === 'revealed' ? `C’était ${names[good]}.`
-    : quiz.wrong.size ? 'Pas tout à fait, essaie encore.'
-    : `Quelle est la note ? (corde ${6-i}, ${f === 0 ? 'à vide' : 'case ' + f})`;
-
-  // A B C commence à A ; Do Ré Mi commence à Do
-  const start = fb.notation === 'solfege' ? 0 : 9;
-  const order = Array.from({length:12}, (_,k) => (start + k) % 12).filter(isShownNote);
-  $('quizAnswers').innerHTML = order.map(n => {
-    const cls = !asking && n === good ? 'right' : quiz.wrong.has(n) ? 'wrong' : '';
-    return `<button type="button" class="${cls}" data-note="${n}" ${!asking || quiz.wrong.has(n) ? 'disabled' : ''}>${names[n]}</button>`;
-  }).join('');
-
-  $('quizScore').textContent = `Score : ${quiz.score} / ${quiz.total}`;
-  $('quizActions').innerHTML =
-    asking ? '<button type="button" data-reveal>Voir la réponse</button>'
-    : quiz.status === 'revealed' ? '<button type="button" data-next>Question suivante</button>' : '';
-}
-
-function newQuestion(){
-  clearTimeout(quiz.timer);
+// mode Aléatoire : tire un rond au hasard (jamais deux fois de suite le même)
+function newTarget(){
   const keys = [];
   for (let i=0;i<6;i++) for (let f=0;f<=FB.frets;f++){
     const key = `${i}-${f}`;
-    if (key !== quiz.target && isShownNote(noteIndex(key))) keys.push(key);   // jamais deux fois de suite la même case
+    if (key !== fb.target && isShownNote(noteIndex(key))) keys.push(key);
   }
-  quiz.target = keys[Math.floor(Math.random() * keys.length)];
-  quiz.wrong.clear();
-  quiz.status = 'ask';
+  fb.target = keys[Math.floor(Math.random() * keys.length)];
+  fb.revealed = false;
 }
 
 // sur petit écran, amène un rond dans la partie visible du manche
@@ -780,34 +737,15 @@ function revealOnBoard(svgId, selector){
 }
 const scrollToTarget = () => revealOnBoard('fretboard', '.target');
 
-function nextQuestion(){ newQuestion(); renderFretboard(); scrollToTarget(); }
-
-function answer(n){
-  if (quiz.status !== 'ask') return;
-  if (n === noteIndex(quiz.target)){
-    quiz.status = 'found';
-    quiz.total++;
-    if (!quiz.wrong.size) quiz.score++;
-    quiz.timer = setTimeout(nextQuestion, 1200);
+function activateCell(key){
+  if (fb.mode === 'manual'){
+    if (!fb.shown.delete(key)) fb.shown.add(key);
+  } else if (!fb.revealed){
+    fb.revealed = true;                 // premier clic : la réponse
   } else {
-    quiz.wrong.add(n);
+    newTarget();                        // clic suivant : une autre note
   }
-  renderFretboard();
-}
-
-// change de mode ou de type de révision : on repart de zéro
-function setStudy(mode, exercise){
-  if (mode === fb.mode && exercise === fb.exercise) return;
-  clearTimeout(quiz.timer);
-  Object.assign(fb, { mode, exercise });
-  fb.shown.clear();
-  Object.assign(quiz, { target:null, score:0, total:0 });
-  if (isQuiz()) newQuestion();
-}
-
-function toggleCell(key){
-  if (!fb.shown.delete(key)) fb.shown.add(key);
-  renderFretboard();
+  renderFretboard(); scrollToTarget();
 }
 
 $('fbNotation').addEventListener('click', e => {
@@ -817,71 +755,63 @@ $('fbNotation').addEventListener('click', e => {
 $('fbNotes').addEventListener('click', e => {
   const b = e.target.closest('button[data-notes]'); if (!b) return;
   fb.notes = b.dataset.notes;
-  // la question en cours porte sur une note qu'on vient de masquer : on en tire une autre
-  if (isQuiz() && !isShownNote(noteIndex(quiz.target))) newQuestion();
+  // le rond tiré porte une note qu'on vient de masquer : on en tire un autre
+  if (fb.mode === 'random' && !isShownNote(noteIndex(fb.target))) newTarget();
   renderFretboard(); scrollToTarget();
 });
 $('fbMode').addEventListener('click', e => {
-  const b = e.target.closest('button[data-fbmode]'); if (!b) return;
-  setStudy(b.dataset.fbmode, fb.exercise);
-  renderFretboard(); scrollToTarget();
-});
-$('fbExercise').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   if (b.hasAttribute('data-clear')) fb.shown.clear();
-  else setStudy('review', b.dataset.exercise);
+  else if (b.dataset.fbmode !== fb.mode){
+    fb.mode = b.dataset.fbmode;
+    fb.shown.clear();                                      // chaque révision démarre à vide
+    if (fb.mode === 'random') newTarget();
+  }
   renderFretboard(); scrollToTarget();
 });
-$('quizAnswers').addEventListener('click', e => {
-  const b = e.target.closest('button[data-note]'); if (b) answer(Number(b.dataset.note));
-});
-$('quizActions').addEventListener('click', e => {
-  const b = e.target.closest('button'); if (!b) return;
-  if (b.hasAttribute('data-next')) return nextQuestion();
-  quiz.status = 'revealed';
-  quiz.total++;
-  renderFretboard();
-});
 $('fretboard').addEventListener('click', e => {
-  const c = e.target.closest('.cell.rev'); if (c) toggleCell(c.dataset.key);
+  const c = e.target.closest('.cell.rev'); if (c) activateCell(c.dataset.key);
 });
 $('fretboard').addEventListener('keydown', e => {
   if (e.key !== 'Enter' && e.key !== ' ') return;
   const c = e.target.closest('.cell.rev'); if (!c) return;
   e.preventDefault();
   const key = c.dataset.key;
-  toggleCell(key);
-  $('fretboard').querySelector(`[data-key="${key}"]`).focus();
+  activateCell(key);
+  const next = fb.mode === 'random' ? '.target' : `[data-key="${key}"]`;
+  $('fretboard').querySelector(next).focus();
 });
 
 /* ============================================================
    Scales — les gammes principales sur le manche
-   steps   : demi-tons au-dessus de la tonique
-   degrees : nom de chaque degré, dans le même ordre
+   steps : demi-tons au-dessus de la tonique
    ============================================================ */
 const SCALES = [
-  { id:'major', name:'Majeure', steps:[0,2,4,5,7,9,11], degrees:['1','2','3','4','5','6','7'],
+  { id:'major', name:'Majeure', steps:[0,2,4,5,7,9,11],
     desc:'La gamme de référence, au son clair et lumineux.' },
-  { id:'minor', name:'Mineure naturelle', steps:[0,2,3,5,7,8,10], degrees:['1','2','♭3','4','5','♭6','♭7'],
+  { id:'minor', name:'Mineure naturelle', steps:[0,2,3,5,7,8,10],
     desc:'Un son plus sombre et mélancolique.' },
-  { id:'pentamaj', name:'Pentatonique majeure', steps:[0,2,4,7,9], degrees:['1','2','3','5','6'],
+  { id:'pentamaj', name:'Pentatonique majeure', steps:[0,2,4,7,9],
     desc:'Cinq notes au son ouvert, très présentes en country, folk et pop.' },
-  { id:'pentamin', name:'Pentatonique mineure', steps:[0,3,5,7,10], degrees:['1','♭3','4','5','♭7'],
+  { id:'pentamin', name:'Pentatonique mineure', steps:[0,3,5,7,10],
     desc:'La gamme classique pour commencer à improviser en rock et en blues.' },
-  { id:'blues', name:'Blues', steps:[0,3,5,6,7,10], degrees:['1','♭3','4','♭5','5','♭7'],
+  { id:'blues', name:'Blues', steps:[0,3,5,6,7,10],
     desc:'La pentatonique mineure avec une note en plus, la « blue note » (♭5).' },
-  { id:'harmonic', name:'Mineure harmonique', steps:[0,2,3,5,7,8,11], degrees:['1','2','♭3','4','5','♭6','7'],
+  { id:'harmonic', name:'Mineure harmonique', steps:[0,2,3,5,7,8,11],
     desc:'La mineure naturelle avec la 7e relevée, à la couleur orientale.' },
-  { id:'melodic', name:'Mineure mélodique', steps:[0,2,3,5,7,9,11], degrees:['1','2','♭3','4','5','6','7'],
+  { id:'melodic', name:'Mineure mélodique', steps:[0,2,3,5,7,9,11],
     desc:'La mineure avec 6e et 7e relevées (forme ascendante), courante en jazz.' }
 ];
-const SC_DISPLAYS = [ ...FB_NOTATIONS, { id:'degrees', name:'Degrés' } ];
-const SC_MODES = [ { id:'board', name:'Tout le manche' }, { id:'play', name:'Play' } ];
 const SPEEDS = [ { id:1300, name:'Lent' }, { id:800, name:'Normal' }, { id:450, name:'Rapide' } ];   // ms par note
 // root : demi-ton de la tonique (C = 0, A = 9)
-const sc = { scale:'pentamin', root:9, display:'letters', mode:'board' };
-// player : step = index de la note en cours dans la séquence (-1 : pas commencé)
+const sc = { scale:'pentamin', root:9, display:'letters' };
+// player : step = index de la note en cours dans la séquence (-1 : arrêté, toute la gamme est affichée)
 const player = { step:-1, timer:null, speed:800 };
+const ICONS = {
+  play:  '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z"/></svg>',
+  pause: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 2.5h3.2v11H3.5zM9.3 2.5h3.2v11H9.3z"/></svg>',
+  stop:  '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="3" width="10" height="10" rx="1.5"/></svg>'
+};
 
 /* ---------- position à jouer ---------- */
 const OPEN_PITCH = [0,5,10,15,19,24];     // hauteur de chaque corde à vide, en demi-tons au-dessus du E grave
@@ -909,20 +839,16 @@ const currentPath = () => buildPath(currentScale(), sc.root);
 /* ---------- lecture ---------- */
 function pause(){ clearTimeout(player.timer); player.timer = null; }
 function resetPlayer(){ pause(); player.step = -1; }
-function goTo(step){
-  const last = sequence(currentPath()).length - 1;
-  player.step = Math.max(-1, Math.min(last, step));
-}
+const lastStep = () => sequence(currentPath()).length - 1;
 function tick(){
-  goTo(player.step + 1);
-  const done = player.step >= sequence(currentPath()).length - 1;
-  if (done) pause(); else player.timer = setTimeout(tick, player.speed);
+  player.step = Math.min(lastStep(), player.step + 1);
+  if (player.step >= lastStep()) pause(); else player.timer = setTimeout(tick, player.speed);
   renderScales();
-  revealOnBoard('scaleBoard', '.current');
+  revealOnBoard('scaleBoard', '.current');   // sur petit écran, la note en cours reste visible
 }
 function togglePlay(){
   if (player.timer){ pause(); renderScales(); return; }
-  if (player.step >= sequence(currentPath()).length - 1) player.step = -1;    // terminé : on repart du début
+  if (player.step >= lastStep()) player.step = -1;    // terminé : on repart du début
   tick();
 }
 
@@ -930,18 +856,17 @@ function renderScales(){
   const scale = currentScale();
   const solfege = sc.display === 'solfege';
   const names = solfege ? SOLFEGE : NOTE_NAMES;
-  const playMode = sc.mode === 'play';
-  const path = playMode ? currentPath() : [];
+  const active = player.step >= 0;          // lecture en cours ou en pause (sinon : toute la gamme)
+  const path = active ? currentPath() : [];
   const { nut, cell, top, gap, r } = FB;
   // certaines positions montent au-delà de la case 12 : le manche s'allonge alors
   const frets = Math.max(FB.frets, ...path.map(p => p.f));
 
-  $('scMode').innerHTML = segmented(SC_MODES, 'data-scmode', sc.mode);
   $('scType').innerHTML = segmented(SCALES, 'data-scale', sc.scale);
   const start = solfege ? 0 : 9;           // A B C commence à A ; Do Ré Mi commence à Do
   $('scRoot').innerHTML = segmented(
     Array.from({length:12}, (_,k) => (start + k) % 12).map(n => ({ id:n, name:names[n] })), 'data-root-note', sc.root);
-  $('scDisplay').innerHTML = segmented(SC_DISPLAYS, 'data-display', sc.display);
+  $('scDisplay').innerHTML = segmented(FB_NOTATIONS, 'data-display', sc.display);
 
   // un rond pour la note de la case f sur la corde i (rien si elle n'est pas dans la gamme)
   // seules les notes de la gamme sont dessinées ; la tonique est en bleu, la note en cours est entourée
@@ -952,7 +877,7 @@ function renderScales(){
     const isRoot = k === 0;
     const cx = f === 0 ? nut - 40 : nut + (f-.5)*cell;
     const cy = top + (5-i)*gap;
-    const label = sc.display === 'degrees' ? scale.degrees[k] : names[n];
+    const label = names[n];
     const size = [0,21,19,17,15][label.length];
     const fill = isRoot ? '#2563b0' : current ? 'var(--orange)' : 'var(--yellow)';
     const stroke = current ? 'var(--line)' : isRoot ? '#2563b0' : 'var(--dot-stroke)';
@@ -963,7 +888,7 @@ function renderScales(){
 
   let s = boardSvg(frets);
   let current = null;
-  if (!playMode){
+  if (!active){
     for (let i=5;i>=0;i--) for (let f=0;f<=frets;f++) s += dot(i, f, false);
   } else {
     // les notes apparaissent une à une à l'aller, puis restent affichées pendant le retour
@@ -974,34 +899,18 @@ function renderScales(){
   $('scaleBoard').setAttribute('viewBox', `0 0 ${880 + (frets - FB.frets)*cell} 384`);
   $('scaleBoard').innerHTML = s;
 
-  $('player').hidden = $('plToggle').hidden = !playMode;
-  if (playMode){
-    const total = sequence(path).length;
-    const playing = player.timer !== null;
-    $('plToggle').textContent = playing ? '❚❚ Pause'
-      : player.step >= 0 && player.step < total - 1 ? '▶ Reprendre' : '▶ Play';
-    $('plPrev').disabled = player.step < 0;
-    $('plNext').disabled = player.step >= total - 1;
-    $('plSpeed').innerHTML = segmented(SPEEDS, 'data-speed', player.speed);
-    if (!current){
-      const list = path.map(p => p.f);
-      $('plMsg').textContent = `Position cases ${Math.min(...list)} à ${Math.max(...list)}, en partant de la tonique sur la corde 6. Appuie sur Play.`;
-    } else {
-      const name = names[(OPEN_SEMITONE[current.s] + current.f) % 12];
-      $('plMsg').textContent = `${player.step < path.length ? 'Aller' : 'Retour'} ${player.step + 1}/${total} · corde ${6 - current.s}, ${current.f === 0 ? 'à vide' : 'case ' + current.f} : ${name}`;
-    }
-  }
+  const playing = player.timer !== null;
+  $('plToggle').innerHTML = playing ? `${ICONS.pause}Pause` : `${ICONS.play}Play`;
+  $('plToggle').setAttribute('aria-pressed', playing);
+  // recommencer, stop et vitesses n'existent qu'une fois la lecture lancée
+  $('plReset').hidden = $('plStop').hidden = $('plSpeed').hidden = !active;
+  $('plSpeed').innerHTML = segmented(SPEEDS, 'data-speed', player.speed);
 
   const title = `${names[sc.root]} · ${scale.name}`;
-  const notes = scale.steps.map(st => names[(sc.root + st) % 12]).join('  ·  ');
+  const notes = scale.steps.map(st => names[(sc.root + st) % 12]).join(', ');
   $('scTitle').textContent = title;
   $('scaleBoard').setAttribute('aria-label', `Gamme ${title} sur le manche : ${notes}`);
   $('scDesc').textContent = scale.desc;
-  $('scNotes').textContent = notes;
-  $('scSteps').textContent = scale.steps
-    .map((st,k) => ({1:'½', 2:'T', 3:'1½'})[(scale.steps[k+1] ?? 12) - st]).join('  –  ');
-  $('scLegend').innerHTML =
-    `<li>${dotIcon('#2563b0','')}tonique</li><li>${dotIcon('var(--yellow)','')}autres notes de la gamme</li>`;
 }
 
 $('scType').addEventListener('click', e => {
@@ -1012,16 +921,10 @@ $('scRoot').addEventListener('click', e => {
   const b = e.target.closest('button[data-root-note]'); if (!b) return;
   sc.root = Number(b.dataset.rootNote); resetPlayer(); renderScales();
 });
-$('scMode').addEventListener('click', e => {
-  const b = e.target.closest('button[data-scmode]'); if (!b || b.dataset.scmode === sc.mode) return;
-  sc.mode = b.dataset.scmode; resetPlayer(); renderScales();
-});
-// après un changement de note : on la garde visible sur petit écran
-function showStep(){ renderScales(); revealOnBoard('scaleBoard', '.current'); }
-$('plToggle').addEventListener('click', () => { togglePlay(); revealOnBoard('scaleBoard', '.current'); });
-$('plPrev').addEventListener('click', () => { pause(); goTo(player.step - 1); showStep(); });
-$('plNext').addEventListener('click', () => { pause(); goTo(player.step + 1); showStep(); });
-$('plReset').addEventListener('click', () => { resetPlayer(); renderScales(); $('scaleBoard').parentElement.scrollLeft = 0; });
+$('plStop').innerHTML = `${ICONS.stop}Stop`;
+$('plToggle').addEventListener('click', togglePlay);
+$('plReset').addEventListener('click', () => { resetPlayer(); tick(); });     // rejoue depuis la première note
+$('plStop').addEventListener('click', () => { resetPlayer(); renderScales(); $('scaleBoard').parentElement.scrollLeft = 0; });
 $('plSpeed').addEventListener('click', e => {
   const b = e.target.closest('button[data-speed]'); if (!b) return;
   player.speed = Number(b.dataset.speed);
