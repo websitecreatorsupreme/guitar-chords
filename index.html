@@ -239,8 +239,19 @@
   .song-main{display:flex; flex-direction:column; min-height:0}
   /* strumming pattern, discret : un petit bouton pour l'écouter, puis les coups et leur compte */
   .strum-row{display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; margin-bottom:22px}
-  .modes.strum-actions{margin:0}
-  .modes.strum-actions button{min-width:78px; padding:3px 12px; font-size:.85rem}
+  .modes.strum-actions,.modes.track-actions{margin:0}
+  .modes.strum-actions button,.modes.track-actions button{min-width:78px; padding:3px 12px; font-size:.85rem}
+  /* le MP3 du morceau : au-dessus de la rythmique, aussi discret qu'elle */
+  .track{margin-bottom:22px}
+  .track-head{display:flex; flex-wrap:wrap; align-items:center; gap:4px 14px; margin-bottom:6px}
+  .track-head .label{margin:0}
+  .track-head .reset{margin-right:10px}
+  .track-name{margin:0 0 6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.85rem}
+  .track-row{display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px}
+  .track-row input{flex:1; min-width:90px; margin:0; accent-color:var(--accent); cursor:pointer}
+  .track-row span{white-space:nowrap; font-size:.8rem; color:var(--muted); font-variant-numeric:tabular-nums}
+  .track-note{margin:4px 0 0; font-size:.8rem; color:var(--muted)}
+  .track-note:empty{display:none}
   .strum{display:flex; margin:0; padding:0; list-style:none; text-align:center}
   .strum li{width:25px; padding:2px 0; border-radius:8px}
   .strum b{display:block; font-size:1.15rem; line-height:1.15}
@@ -401,6 +412,24 @@
         </div>
       </div>
       <div class="song-side">
+        <div class="track">
+          <div class="track-head">
+            <p class="label">Morceau (MP3)</p>
+            <span id="trackLinks" hidden><button type="button" class="reset" id="trackChange">Changer</button><button type="button" class="reset" id="trackRemove">Retirer</button></span>
+          </div>
+          <input type="file" id="trackFile" accept=".mp3,audio/mpeg" hidden>
+          <div class="modes track-actions" id="trackEmpty"><button type="button" class="ghost" id="trackImport">Importer un MP3</button></div>
+          <div id="trackBox" hidden>
+            <p class="track-name" id="trackName"></p>
+            <div class="track-row">
+              <div class="modes track-actions"><button type="button" class="play" id="trackPlay" aria-pressed="false">Play</button></div>
+              <input type="range" id="trackSeek" min="0" max="0" step="0.1" value="0" aria-label="Position dans le morceau">
+              <span id="trackTime"></span>
+            </div>
+          </div>
+          <p class="track-note" id="trackNote" role="status"></p>
+          <audio id="trackAudio" preload="metadata"></audio>
+        </div>
         <p class="label">Strumming pattern · <span id="songTempo"></span></p>
         <div class="strum-row">
           <div class="modes strum-actions"><button type="button" class="play" id="strumPlay" aria-pressed="false">Play</button></div>
@@ -1441,7 +1470,7 @@ function stopStrum(){
   clearTimeout(strummer.timer); strummer.timer = null; strummer.step = -1;
   dampStrum(); renderStrum();
 }
-function startStrum(){ strummer.next = Date.now(); strumTick(); }
+function startStrum(){ pauseTrack(); strummer.next = Date.now(); strumTick(); }
 $('strumPlay').addEventListener('click', () => strummer.timer === null ? startStrum() : stopStrum());
 
 function songDiagram(c){
@@ -1452,6 +1481,96 @@ function songDiagram(c){
   const svg = diagramSvg(chord || c, level, 'fingers').replace(/ data-tip="[^"]*" tabindex="0" role="img" aria-label="[^"]*"/g, '');
   return `<figure><figcaption>${name}</figcaption><svg viewBox="0 24 360 354" role="img" aria-label="Diagramme de ${name}">${svg}</svg></figure>`;
 }
+/* ---------- le MP3 du morceau, importé depuis l'ordinateur ---------- */
+// Il reste dans ce navigateur : trop gros pour localStorage, il va dans sa base (IndexedDB). Rien n'est envoyé ailleurs.
+function trackStore(mode, run){
+  return new Promise((resolve, reject) => {
+    const open = indexedDB.open('guitar-chords', 1);
+    open.onupgradeneeded = () => open.result.createObjectStore('mp3');
+    open.onerror = () => reject(open.error);
+    open.onsuccess = () => {
+      const db = open.result, tx = db.transaction('mp3', mode), req = run(tx.objectStore('mp3'));
+      tx.oncomplete = () => { db.close(); resolve(req.result); };
+      tx.onabort = tx.onerror = () => { db.close(); reject(tx.error); };
+    };
+  });
+}
+// song : morceau dont le fichier est chargé ; tracks : fichiers déjà lus pendant cette visite
+const track = { song:null, name:'', url:null, note:'' };
+const tracks = {};
+function renderTrack(){
+  const audio = $('trackAudio'), loaded = track.url !== null, playing = loaded && audio.paused === false;
+  $('trackEmpty').hidden = loaded;
+  $('trackBox').hidden = !loaded;
+  $('trackLinks').hidden = !loaded;
+  $('trackName').textContent = track.name;
+  $('trackPlay').innerHTML = playing ? `${ICONS.pause}Pause` : `${ICONS.play}Play`;
+  $('trackPlay').setAttribute('aria-pressed', playing);
+  const length = Number.isFinite(audio.duration) ? audio.duration : 0, now = loaded ? audio.currentTime || 0 : 0;
+  $('trackSeek').max = length;
+  $('trackSeek').value = now;
+  $('trackTime').textContent = `${clock(Math.floor(now))} / ${clock(Math.floor(length))}`;
+  $('trackNote').textContent = track.note;
+}
+function pauseTrack(){ const audio = $('trackAudio'); if (audio.paused === false) audio.pause(); }
+// met un fichier (ou rien) dans le lecteur
+function setTrack(record){
+  const audio = $('trackAudio');
+  pauseTrack();
+  if (track.url) URL.revokeObjectURL(track.url);
+  track.url = record ? URL.createObjectURL(record.blob) : null;
+  track.name = record ? record.name : '';
+  if (record) audio.src = track.url; else if (audio.removeAttribute){ audio.removeAttribute('src'); audio.load(); }
+  renderTrack();
+}
+async function showTrack(id){
+  if (track.song === id) return renderTrack();               // déjà là : on garde la position d'écoute
+  track.song = id; track.note = ''; setTrack(tracks[id] || null);
+  if (tracks[id] !== undefined) return;
+  let record = null;
+  try { record = await trackStore('readonly', store => store.get(id)); } catch(e){}
+  if (tracks[id] !== undefined) return;                      // un import a eu lieu entre-temps
+  tracks[id] = record || null;
+  if (track.song === id) setTrack(tracks[id]);
+}
+async function importTrack(file){
+  const id = songId;
+  if (!/\.mp3$/i.test(file.name) && file.type !== 'audio/mpeg'){
+    track.note = 'Ce fichier n’est pas un MP3.'; return renderTrack();
+  }
+  tracks[id] = { name:file.name, blob:file };
+  track.note = ''; setTrack(tracks[id]);
+  try {
+    await trackStore('readwrite', store => store.put(tracks[id], id));
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist();   // à conserver durablement
+  } catch(e){
+    track.note = 'Ce navigateur ne peut pas le garder : il faudra le réimporter.'; renderTrack();
+  }
+}
+async function removeTrack(){
+  const id = songId;
+  tracks[id] = null; track.note = ''; setTrack(null);
+  try { await trackStore('readwrite', store => store.delete(id)); } catch(e){}
+}
+$('trackImport').addEventListener('click', () => $('trackFile').click());
+$('trackChange').addEventListener('click', () => $('trackFile').click());
+$('trackRemove').addEventListener('click', removeTrack);
+$('trackFile').addEventListener('change', e => {
+  const file = e.target.files[0];
+  e.target.value = '';                                       // le même fichier pourra être rechoisi
+  if (file) importTrack(file);
+});
+$('trackPlay').addEventListener('click', () => {
+  const audio = $('trackAudio');
+  if (audio.paused){
+    stopStrum();                                             // un seul son à la fois
+    audio.play().catch(() => { track.note = 'Lecture impossible : le fichier semble abîmé.'; renderTrack(); });
+  } else audio.pause();
+});
+$('trackSeek').addEventListener('input', e => { $('trackAudio').currentTime = Number(e.target.value); renderTrack(); });
+['play','pause','ended','timeupdate','loadedmetadata','durationchange'].forEach(type =>
+  $('trackAudio').addEventListener(type, renderTrack));
+
 function renderSongs(){
   const song = SONGS.find(s => s.id === songId);
   $('songList').innerHTML = segmented(SONGS.map(s => ({ id:s.id, name:`${s.title} · ${s.artist}` })), 'data-song', songId);
@@ -1462,6 +1581,7 @@ function renderSongs(){
   $('songTempo').textContent = `${song.tempo} bpm`;
   renderStrum();
   renderSheet();
+  showTrack(song.id);
 }
 $('songList').addEventListener('click', e => {
   const b = e.target.closest('button[data-song]'); if (!b) return;
@@ -1493,7 +1613,7 @@ function setView(v){
   $('page').classList.toggle('flow', false);           // seule une tablature validée allonge la page
   hideTip();
   if (v !== 'scales') pause();     // la lecture d'une gamme s'arrête quand on change d'onglet
-  if (v !== 'songs') stopStrum();  // la rythmique aussi
+  if (v !== 'songs'){ stopStrum(); pauseTrack(); }   // la rythmique et le MP3 aussi
   document.querySelectorAll('#views button').forEach(b =>
     b.setAttribute('aria-pressed', b.dataset.view === v));
   if (v === 'fretboard'){ setHash('fretboard'); renderFretboard(); scrollToTarget(); }
