@@ -171,11 +171,26 @@
   @media (max-width:699px){ #scRoot{grid-template-columns:repeat(6,minmax(0,1fr))} }
   .chords-layout{
     display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1fr); column-gap:28px; align-items:start;
-    grid-template-areas:"figure display" "figure levels" "figure ."; grid-template-rows:auto auto 1fr;
+    grid-template-areas:"figure display" "figure levels" "figure timer"; grid-template-rows:auto auto 1fr;
   }
   .chords-layout .figure{grid-area:figure}
   .chords-layout #levelsBox{grid-area:levels}
   .chords-layout .figure .hint{margin-top:10px}
+  /* minuteur : sous les options, à droite du diagramme */
+  .chords-layout #timerBox{grid-area:timer; margin-top:6px; min-width:0}
+  .modes.timer-time{flex-wrap:nowrap; align-items:center}
+  .modes.timer-time button.step{flex:none; width:40px; height:40px; padding:0; font-size:1.3rem; line-height:1}
+  .modes.timer-time button.idle{visibility:hidden}   /* la durée ne se change qu'à l'arrêt */
+  #tmTime{
+    flex:1; min-width:0; width:100%; padding:2px 0; font:inherit; font-size:2.2rem; font-weight:700; text-align:center;
+    font-variant-numeric:tabular-nums; color:var(--ink); background:none; border:2px solid var(--chip-hover); border-radius:14px;
+  }
+  #tmTime:read-only{border-color:transparent}
+  #tmTime:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
+  #timerBox.done #tmTime{color:var(--accent)}
+  .modes.timer-actions{gap:6px}
+  .modes.timer-actions button{padding-left:10px; padding-right:10px}
+  .modes.timer-actions button.play{flex:1; min-width:0; white-space:nowrap}
   #viewChords .levels{flex-wrap:nowrap; gap:6px; margin-bottom:14px}
   #viewChords .levels button{flex:1; padding:7px 0}
   .chords-layout .card{padding:10px 8px}
@@ -196,7 +211,7 @@
     #viewChords .roots{grid-template-columns:repeat(4,minmax(0,1fr))}
     .chords-layout{grid-template-columns:minmax(0,1fr)}
     /* sur téléphone, notation et niveaux restent au-dessus du diagramme */
-    .chords-layout{grid-template-areas:"display" "levels" "figure"; grid-template-rows:none}
+    .chords-layout{grid-template-areas:"display" "levels" "figure" "timer"; grid-template-rows:none}
     .chords-layout .card svg{max-height:380px}
   }
 
@@ -257,6 +272,22 @@
           <svg id="diagram" viewBox="0 24 360 354" role="group"></svg>
         </section>
         <p class="hint">Survolez les éléments pour comprendre ce qu'ils représentent.</p>
+      </div>
+
+      <div id="timerBox">
+        <p class="label">Minuteur</p>
+        <div class="modes timer-time">
+          <button type="button" class="step" id="tmLess" aria-label="Retirer 15 secondes">−</button>
+          <input type="text" id="tmTime" value="1:00" maxlength="5" autocomplete="off" aria-label="Durée du minuteur (minutes:secondes)">
+          <button type="button" class="step" id="tmMore" aria-label="Ajouter 15 secondes">+</button>
+        </div>
+        <div class="modes timer-actions">
+          <button type="button" class="play" id="tmToggle" aria-pressed="false">Play</button>
+          <button type="button" class="icon" id="tmReset" aria-label="Recommencer" title="Recommencer" hidden>
+            <svg class="line" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 4v6h6M3.5 15a9 9 0 1 0 2.1-9.4L1 10"/></svg>
+          </button>
+          <button type="button" class="ghost" id="tmStop" hidden>Stop</button>
+        </div>
       </div>
     </div>
   </div><!-- /viewChords -->
@@ -691,6 +722,7 @@ $('levels').addEventListener('click', e => {
 });
 document.addEventListener('keydown', e => {
   if (view !== 'chords') return;     // sur le fretboard, les flèches font défiler le manche
+  if (e.target.closest && e.target.closest('input, select')) return;   // dans le minuteur, elles déplacent le curseur
   if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
   const chord = chordById(state.chord);
   if (chord.levels.length < 2) return;
@@ -1170,6 +1202,63 @@ $('scDisplay').addEventListener('click', e => {
 });
 
 /* ============================================================
+   Minuteur (onglet Chords) : compte à rebours, 1 min par défaut
+   ============================================================ */
+const TIMER_STEP = 15, TIMER_MIN = 5, TIMER_MAX = 99*60 + 59;     // en secondes
+// duration : durée choisie (s) ; ms : temps restant ; end : heure de fin quand le minuteur tourne
+const timer = { duration:60, ms:60000, end:null, tick:null };
+const clock = sec => `${Math.floor(sec/60)}:${String(sec % 60).padStart(2, '0')}`;
+// « 2:30 » ou « 2 » (minutes) ; null si la saisie n'est pas une durée
+function parseClock(text){
+  const m = text.trim().match(/^(\d{1,2})(?::([0-5]?\d))?$/);
+  return m ? Number(m[1])*60 + Number(m[2] || 0) : null;
+}
+function renderTimer(){
+  const running = timer.end !== null, started = running || timer.ms !== timer.duration*1000;
+  $('tmTime').value = clock(Math.ceil(timer.ms/1000));
+  $('tmTime').readOnly = started;
+  $('tmLess').classList.toggle('idle', started);
+  $('tmMore').classList.toggle('idle', started);
+  $('timerBox').classList.toggle('done', timer.ms === 0);
+  $('tmToggle').innerHTML = running ? `${ICONS.pause}Pause` : `${ICONS.play}Play`;
+  $('tmToggle').setAttribute('aria-pressed', running);
+  $('tmReset').hidden = $('tmStop').hidden = !started;       // comme dans Scales : seulement une fois lancé
+}
+function stopTicking(){ clearInterval(timer.tick); timer.tick = null; timer.end = null; }
+// fin du temps : trois notes de guitare
+function ringTimer(){ [0,1,2].forEach(k => setTimeout(() => playNote(5, 12), k*450)); }
+// le temps restant se calcule sur l'horloge : il reste juste même si l'onglet est en arrière-plan
+function tickTimer(){
+  const before = Math.ceil(timer.ms/1000);
+  timer.ms = Math.max(0, timer.end - Date.now());
+  if (!timer.ms){ stopTicking(); renderTimer(); ringTimer(); }
+  else if (Math.ceil(timer.ms/1000) !== before) renderTimer();
+}
+function startTimer(){
+  if (!timer.ms) timer.ms = timer.duration*1000;             // terminé : on repart de la durée choisie
+  timer.end = Date.now() + timer.ms;
+  timer.tick = setInterval(tickTimer, 200);
+  try { getCtx().resume(); } catch(e){}                      // le clic autorise le son de fin
+  renderTimer();
+}
+function pauseTimer(){ timer.ms = Math.max(1, timer.end - Date.now()); stopTicking(); renderTimer(); }
+function resetTimer(){ stopTicking(); timer.ms = timer.duration*1000; renderTimer(); }
+function setDuration(sec){ timer.duration = Math.min(TIMER_MAX, Math.max(TIMER_MIN, sec)); resetTimer(); }
+
+$('tmStop').innerHTML = `${ICONS.stop}Stop`;
+$('tmToggle').addEventListener('click', () => timer.end === null ? startTimer() : pauseTimer());
+$('tmReset').addEventListener('click', () => { resetTimer(); startTimer(); });
+$('tmStop').addEventListener('click', resetTimer);
+$('tmLess').addEventListener('click', () => setDuration(timer.duration - TIMER_STEP));
+$('tmMore').addEventListener('click', () => setDuration(timer.duration + TIMER_STEP));
+$('tmTime').addEventListener('focus', e => { if (!e.target.readOnly) e.target.select(); });
+$('tmTime').addEventListener('change', e => {
+  const sec = parseClock(e.target.value);
+  if (sec === null) renderTimer(); else setDuration(sec);    // saisie illisible : on garde la durée
+});
+$('tmTime').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
+
+/* ============================================================
    Onglets et URL
    ============================================================ */
 let view = 'chords';
@@ -1204,6 +1293,7 @@ loadSamples();
   const m = hash.match(/^([A-Za-z0-9]+)-(l\d|bar|std)$/);
   if (m){ state.chord = m[1]; if (m[2] !== 'std') state.pref = m[2]; }
   checkData();
+  renderTimer();
   setView(hash === 'fretboard' || hash === 'scales' ? hash : 'chords');
 })();
 </script>
