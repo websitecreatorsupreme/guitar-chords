@@ -215,10 +215,42 @@
     .chords-layout .card svg{max-height:380px}
   }
 
+  /* onglet Songs : morceaux et infos, accords du morceau, puis tablature à gauche et repères à droite */
+  .song-head{display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; column-gap:24px}
+  .song-meta{margin:0 0 12px; font-size:.85rem; color:var(--muted)}
+  .song-meta a{margin-left:14px; color:var(--accent); font-weight:600}
+  .song-chords{display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:10px; margin-top:calc(.72rem * 1.45 + 8px)}
+  .song-chords figure{margin:0; padding:6px 4px 4px; background:var(--card); border-radius:14px; box-shadow:0 2px 14px rgba(0,0,0,.08); text-align:center}
+  .song-chords figcaption{color:#111; font-weight:700; font-size:1.15rem; line-height:1.25}
+  .song-chords svg{display:block; width:100%; height:auto; max-height:116px}
+  .song-grid{display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1fr); gap:20px 28px; margin-top:16px}
+  #viewSongs .song-tab{display:flex; flex-direction:column; padding:10px 12px 12px; min-height:260px}
+  #viewSongs .song-tab h2{margin-bottom:8px; font-size:1.15rem; font-weight:700}
+  #songTab{
+    flex:1; width:100%; min-height:0; resize:none; padding:10px 12px; color:#111; background:#fff; white-space:pre;
+    border:2px dashed #d8ccb8; border-radius:12px; font:.95rem/1.35 ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  #songTab:focus-visible{outline:3px solid var(--accent); outline-offset:1px}
+  .song-side dl{display:grid; grid-template-columns:auto minmax(0,1fr); gap:6px 12px; margin:0 0 12px; align-items:center; font-size:.9rem}
+  .song-side dt{font-weight:700}
+  .song-side dd{display:flex; flex-wrap:wrap; gap:5px; margin:0}
+  .song-side .bar{padding:2px 9px; border-radius:8px; background:var(--chip); font-weight:600; white-space:pre}
+  .song-side .strokes{font-size:1.15rem; font-weight:700; letter-spacing:.1em; line-height:1.1}
+  .song-order{display:flex; flex-wrap:wrap; gap:5px; margin:0 0 14px; padding:0; list-style:none; font-size:.85rem; font-weight:600}
+  .song-order li{padding:3px 10px; border:2px solid var(--chip-hover); border-radius:999px}
+  @media (max-width:699px){
+    .song-chords{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .song-grid{grid-template-columns:minmax(0,1fr)}
+  }
+
   /* grand écran : chaque onglet tient dans la fenêtre sans défiler, le visuel prend la place restante */
   @media (min-width:700px) and (min-height:600px){
     main{height:100vh; height:100dvh; display:flex; flex-direction:column}
-    #viewChords,#viewFret,#viewScales{flex:1; min-height:0; display:flex; flex-direction:column}
+    #viewChords,#viewFret,#viewScales,#viewSongs{flex:1; min-height:0; display:flex; flex-direction:column}
+    /* Songs : tablature et repères prennent la place restante, et défilent chez eux si besoin */
+    .song-grid{flex:1; min-height:0; grid-template-rows:minmax(0,1fr)}
+    #viewSongs .song-tab{min-height:0; max-height:520px}
+    .song-side{min-height:0; overflow:auto}
 
     #viewFret .card,#viewScales .card{flex:1 1 0; min-height:190px; max-height:520px; display:flex; flex-direction:column; padding:10px 8px}
     .card .scroll{flex:1; min-height:0; position:relative; overflow:hidden}
@@ -248,6 +280,7 @@
       <button type="button" data-view="chords" aria-pressed="true">Chords</button>
       <button type="button" data-view="fretboard" aria-pressed="false">Fretboard</button>
       <button type="button" data-view="scales" aria-pressed="false">Scales</button>
+      <button type="button" data-view="songs" aria-pressed="false">Songs</button>
     </nav>
   </header>
 
@@ -330,6 +363,28 @@
         <svg id="fretboard" class="board" viewBox="0 0 880 384" role="group" aria-label="Manche de guitare, cases 0 à 12"></svg>
       </div>
     </section>
+  </div>
+
+  <div id="viewSongs" hidden>
+    <div class="song-head">
+      <div class="types" id="songList" role="group" aria-label="Morceau"></div>
+      <p class="song-meta"><span id="songInfo"></span><a id="songSource" target="_blank" rel="noopener noreferrer">Voir sur Ultimate Guitar ↗</a></p>
+    </div>
+    <div class="song-chords" id="songChords"></div>
+    <div class="song-grid">
+      <section class="card song-tab">
+        <h2>Tablature</h2>
+        <textarea id="songTab" wrap="off" spellcheck="false" aria-label="Tablature du morceau" placeholder="Colle ta tablature ici : elle reste enregistrée dans ce navigateur uniquement."></textarea>
+      </section>
+      <div class="song-side">
+        <p class="label">Déroulé</p>
+        <ol class="song-order" id="songOrder"></ol>
+        <p class="label">Progression</p>
+        <dl id="songProgression"></dl>
+        <p class="label">Strumming pattern</p>
+        <dl id="songStrum"></dl>
+      </div>
+    </div>
   </div>
 
   <div id="viewScales" hidden>
@@ -572,7 +627,8 @@ const sx = i => LEFT + i*GAP;
 const FINGER_NAMES = { 1:'Index', 2:'Majeur', 3:'Annulaire', 4:'Auriculaire', T:'Pouce' };
 const tipped = (tip, inner) => `<g data-tip="${tip}" tabindex="0" role="img" aria-label="${tip}">${inner}</g>`;
 
-function drawDiagram(chord, level, mode){
+function drawDiagram(chord, level, mode){ $('diagram').innerHTML = diagramSvg(chord, level, mode); }
+function diagramSvg(chord, level, mode){
   const base = chord.base;
   const bottom = TOP + ROWS*ROW;
   let s = '';
@@ -627,7 +683,7 @@ function drawDiagram(chord, level, mode){
     s += tipped(FINGER_NAMES[lab], shape + txt);
   });
 
-  $('diagram').innerHTML = s;
+  return s;
 }
 
 /* ============================================================
@@ -722,7 +778,7 @@ $('levels').addEventListener('click', e => {
 });
 document.addEventListener('keydown', e => {
   if (view !== 'chords') return;     // sur le fretboard, les flèches font défiler le manche
-  if (e.target.closest && e.target.closest('input, select')) return;   // dans le minuteur, elles déplacent le curseur
+  if (e.target.closest && e.target.closest('input, select, textarea')) return;   // dans le minuteur, elles déplacent le curseur
   if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
   const chord = chordById(state.chord);
   if (chord.levels.length < 2) return;
@@ -1259,6 +1315,64 @@ $('tmTime').addEventListener('change', e => {
 $('tmTime').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
 
 /* ============================================================
+   Songs : accords, déroulé et strumming pattern d'un morceau.
+   La tablature n'est pas fournie : chacun colle la sienne, gardée dans son navigateur.
+   ============================================================ */
+// chords : { ref, level } pour un accord de l'onglet Chords, sinon sa forme complète
+const SONGS = [
+  { id:'child-psychology', title:'Child Psychology', artist:'Black Box Recorder',
+    info:'Accordage standard (E A D G B E) · sans capo',
+    source:'https://tabs.ultimate-guitar.com/tab/black-box-recorder/child-psychology-tabs-1205549',
+    chords:[
+      { ref:'D' }, { ref:'C' }, { ref:'A' }, { ref:'Bm', level:'bar' },
+      { name:'E5', base:1, frets:[0,2,2,x,x,x], fingers:[[2,1,1,'1'],[2,2,2,'2']] },
+      { ref:'G' },
+      { name:'D/A', base:1, frets:[x,0,0,2,3,2], fingers:[[2,3,3,'1'],[3,4,4,'3'],[2,5,5,'2']] }
+    ],
+    order:['Couplet ×3', 'Refrain', 'Couplet ×2', 'Refrain', 'Pont', 'Couplet ×2', 'Refrain ×2'],
+    progression:[
+      { part:'Couplet', bars:['D', 'D', 'D', 'C  A'] },
+      { part:'Refrain', bars:['Bm', 'E5', 'G', 'D/A'] },
+      { part:'Pont', note:'un riff, sans accords (voir la tablature)' }
+    ],
+    strum:[
+      { part:'Refrain', strokes:'↓↓↓↓↓↓↓↓', note:'8 par accord (sens proposé)' },
+      { part:'Couplet', note:'en arpèges, note par note' }
+    ] }
+];
+let songId = SONGS[0].id;
+const tabKey = id => `guitar-chords:tab:${id}`;
+function readTab(id){ try { return localStorage.getItem(tabKey(id)) || ''; } catch(e){ return ''; } }
+function saveTab(id, text){ try { localStorage.setItem(tabKey(id), text); } catch(e){} }
+
+function songDiagram(c){
+  const chord = c.ref ? chordById(c.ref) : null;
+  const level = chord ? chord.levels.find(l => l.id === (c.level || 'std')) : c;
+  const name = chord ? chord.label : c.name;
+  // petits diagrammes : sans survol ni arrêt au clavier
+  const svg = diagramSvg(chord || c, level, 'fingers').replace(/ data-tip="[^"]*" tabindex="0" role="img" aria-label="[^"]*"/g, '');
+  return `<figure><figcaption>${name}</figcaption><svg viewBox="0 24 360 354" role="img" aria-label="Diagramme de ${name}">${svg}</svg></figure>`;
+}
+function renderSongs(){
+  const song = SONGS.find(s => s.id === songId);
+  $('songList').innerHTML = segmented(SONGS.map(s => ({ id:s.id, name:`${s.title} · ${s.artist}` })), 'data-song', songId);
+  $('songInfo').textContent = song.info;
+  $('songSource').href = song.source;
+  $('songChords').innerHTML = song.chords.map(songDiagram).join('');
+  $('songOrder').innerHTML = song.order.map(part => `<li>${part}</li>`).join('');
+  $('songProgression').innerHTML = song.progression.map(p =>
+    `<dt>${p.part}</dt><dd>${p.bars ? p.bars.map(b => `<span class="bar">${b}</span>`).join('') : p.note}</dd>`).join('');
+  $('songStrum').innerHTML = song.strum.map(p =>
+    `<dt>${p.part}</dt><dd>${p.strokes ? `<span class="strokes" aria-label="${p.strokes.length} coups vers le bas">${p.strokes}</span>` : ''}<span>${p.note}</span></dd>`).join('');
+  $('songTab').value = readTab(song.id);
+}
+$('songList').addEventListener('click', e => {
+  const b = e.target.closest('button[data-song]'); if (!b) return;
+  songId = b.dataset.song; renderSongs();
+});
+$('songTab').addEventListener('input', e => saveTab(songId, e.target.value));
+
+/* ============================================================
    Onglets et URL
    ============================================================ */
 let view = 'chords';
@@ -1272,12 +1386,14 @@ function setView(v){
   $('viewChords').hidden = v !== 'chords';
   $('viewFret').hidden = v !== 'fretboard';
   $('viewScales').hidden = v !== 'scales';
+  $('viewSongs').hidden = v !== 'songs';
   hideTip();
   if (v !== 'scales') pause();     // la lecture d'une gamme s'arrête quand on change d'onglet
   document.querySelectorAll('#views button').forEach(b =>
     b.setAttribute('aria-pressed', b.dataset.view === v));
   if (v === 'fretboard'){ setHash('fretboard'); renderFretboard(); scrollToTarget(); }
   else if (v === 'scales'){ setHash('scales'); renderScales(); }
+  else if (v === 'songs'){ setHash('songs'); renderSongs(); }
   else render();
 }
 
@@ -1287,14 +1403,14 @@ $('views').addEventListener('click', e => {
 
 loadSamples();
 
-// état initial depuis l'URL (#Fs-l3, #Am-std, #fretboard, #scales)
+// état initial depuis l'URL (#Fs-l3, #Am-std, #fretboard, #scales, #songs)
 (function init(){
   const hash = location.hash.slice(1);
   const m = hash.match(/^([A-Za-z0-9]+)-(l\d|bar|std)$/);
   if (m){ state.chord = m[1]; if (m[2] !== 'std') state.pref = m[2]; }
   checkData();
   renderTimer();
-  setView(hash === 'fretboard' || hash === 'scales' ? hash : 'chords');
+  setView(['fretboard', 'scales', 'songs'].includes(hash) ? hash : 'chords');
 })();
 </script>
 </body>
