@@ -138,7 +138,7 @@
   .cell:focus-visible circle{stroke:var(--line); stroke-width:4}
   #fbHint{margin-top:10px}
   /* Notes « Manuel » : rangée des 12 notes, comme dans Chords en plus petit */
-  #fbNote{grid-template-columns:repeat(12,minmax(0,1fr)); gap:8px; margin-bottom:12px}
+  #fbNote{grid-template-columns:repeat(12,minmax(0,1fr)); gap:8px; margin-bottom:0; padding-bottom:12px}
   #fbNote button{font-size:1.05rem; padding:6px 0; border-radius:11px}
   @media (max-width:699px){ #fbNote{grid-template-columns:repeat(6,minmax(0,1fr))} }
 
@@ -158,7 +158,9 @@
   .controls .modes.positions button[data-pos="0"]{padding-left:11px; padding-right:11px}
   #scaleBoard .note.outside{opacity:.28}   /* notes hors de la position choisie */
   .modes.speeds{margin:0; flex-wrap:nowrap}   /* vitesses à la suite des boutons de lecture */
-  #viewChords .card h2,#viewScales .card h2{font-size:1.3rem}   /* nom de l'accord ou de la gamme */
+  /* nom de l'accord ou de la gamme, en gras ; un peu moins grand dans une fenêtre étroite */
+  #viewChords,#viewScales{--title:clamp(1.35rem,2.4vw,1.75rem)}
+  #viewChords .card h2,#viewScales .card h2{font-size:var(--title); font-weight:700; line-height:1.25}
   #scDesc{margin-top:12px}
 
   /* onglet Chords : notes et accords en haut ; diagramme à gauche (2/3) ; notation, niveaux et légende à droite (1/3) */
@@ -214,10 +216,13 @@
     .chords-layout{flex:1; min-height:0; grid-template-rows:auto auto minmax(0,1fr)}
     .chords-layout .figure{align-self:stretch; min-height:0; display:flex; flex-direction:column}
     .chords-layout .card{flex:1 1 0; min-height:200px; max-height:540px; position:relative}
-    .chords-layout .card svg{position:absolute; top:44px; left:8px; width:calc(100% - 16px); height:calc(100% - 52px); max-width:none; max-height:none}
+    .chords-layout .card svg{position:absolute; top:calc(var(--title) * 1.25 + 14px); left:8px; width:calc(100% - 16px); height:calc(100% - var(--title) * 1.25 - 22px); max-width:none; max-height:none}
   }
-  /* petite fenêtre : la carte de la gamme peut se tasser un peu plus, pour tenir sans défiler */
-  @media (min-width:700px) and (max-width:1179px) and (min-height:600px) and (max-height:660px){ #viewScales .card{min-height:160px} }
+  /* autant d'air entre les filtres et le manche qu'entre le titre du site et les filtres
+     (les 12 px sous les boutons comptent déjà) */
+  #viewFret .card,#viewScales .card{margin-top:calc(.72rem * 1.45 + 8px)}
+  /* petite fenêtre : la carte du manche peut se tasser un peu plus, pour tenir sans défiler */
+  @media (min-width:700px) and (min-height:600px) and (max-height:700px){ #viewFret .card,#viewScales .card{min-height:130px} }
 </style>
 </head>
 <body>
