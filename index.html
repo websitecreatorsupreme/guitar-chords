@@ -147,7 +147,7 @@
   .modes button svg.line{fill:none; stroke:currentColor; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round}
   .controls .lecture{flex:1 1 360px}
   .modes.speeds{margin:0 0 0 auto; flex-wrap:nowrap}   /* vitesses alignées à droite */
-  #viewScales .card h2{font-size:1.3rem}
+  #viewChords .card h2,#viewScales .card h2{font-size:1.3rem}   /* nom de l'accord ou de la gamme */
   #scDesc{margin-top:12px}
 
   /* onglet Chords : notes et accords en haut ; diagramme à gauche (2/3) ; notation, niveaux et légende à droite (1/3) */
@@ -203,7 +203,7 @@
     .chords-layout{flex:1; min-height:0; grid-template-rows:auto auto minmax(0,1fr)}
     .chords-layout .figure{align-self:stretch; min-height:0; display:flex; flex-direction:column}
     .chords-layout .card{flex:1 1 0; min-height:200px; max-height:540px; position:relative}
-    .chords-layout .card svg{position:absolute; top:10px; left:8px; width:calc(100% - 16px); height:calc(100% - 20px); max-width:none; max-height:none}
+    .chords-layout .card svg{position:absolute; top:44px; left:8px; width:calc(100% - 16px); height:calc(100% - 52px); max-width:none; max-height:none}
   }
 </style>
 </head>
@@ -235,6 +235,7 @@
 
       <div class="figure"><!-- diagramme -->
         <section class="card" aria-live="polite">
+          <h2 id="chordTitle"></h2>
           <svg id="diagram" viewBox="0 24 360 354" role="group"></svg>
         </section>
       </div>
@@ -623,6 +624,7 @@ function render(){
 
   // diagramme
   const title = multi ? `${chord.label} ${level.name}` : chord.label;
+  $('chordTitle').textContent = chord.label;
   $('diagram').setAttribute('aria-label', `Diagramme de ${title}`);
   hideTip();
   drawDiagram(chord, level, state.mode);
