@@ -86,10 +86,22 @@
 
   /* fretboard */
   /* tous les réglages sur une même ligne quand la largeur le permet */
-  .controls{display:flex; flex-wrap:wrap; column-gap:28px; align-items:flex-end}
-  .controls .modes button{padding-left:14px; padding-right:14px}
+  .controls{display:flex; flex-wrap:wrap; column-gap:20px; align-items:flex-end}
+  .controls .modes button{padding-left:12px; padding-right:12px}
   .modes button.ghost{background:none; border:2px solid var(--chip-hover); padding:7px 14px}
-  .controls .mode-box{flex:0 0 auto; min-width:450px}   /* « Tout masquer » apparaît sans faire bouger le manche */
+  .mode-box{display:flex; flex-wrap:wrap; column-gap:20px}
+  /* fenêtre étroite : Mode a toujours sa propre ligne, pour que le manche ne bouge pas d'un mode à l'autre */
+  @media (min-width:700px) and (max-width:999px){ .mode-box{flex-basis:100%} }
+  /* zone du mode Aléatoire : deux listes de frettes, au même gabarit que les pastilles */
+  .modes.zone{align-items:center; font-size:.95rem; font-weight:600}
+  .zone select{
+    font:inherit; height:40px; padding:0 28px 0 14px; border:0; border-radius:999px; cursor:pointer; color:var(--ink);
+    -webkit-appearance:none; appearance:none; background-color:var(--chip);
+    background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+    background-position:right 15px center,right 10px center; background-size:5px 5px; background-repeat:no-repeat;
+  }
+  .zone select:hover{background-color:var(--chip-hover)}
+  .zone select:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
   .scroll{overflow-x:auto}
   .card svg.board{max-width:none; min-width:700px; margin:0}
   .cell.rev{cursor:pointer}
@@ -136,7 +148,6 @@
     .chords-layout{grid-template-columns:minmax(0,1fr)}
     /* sur téléphone, notation et niveaux restent au-dessus du diagramme */
     .chords-layout{grid-template-areas:"display" "levels" "figure" "info"; grid-template-rows:none}
-    .controls .mode-box{min-width:0}
     .chords-layout .info{margin-top:22px}
     .chords-layout .card svg{max-height:380px}
   }
@@ -207,8 +218,18 @@
         <div class="modes" id="fbNotes" role="group" aria-label="Notes affichées"></div>
       </div>
       <div class="mode-box">
-        <p class="label">Mode</p>
-        <div class="modes" id="fbMode" role="group" aria-label="Mode"></div>
+        <div>
+          <p class="label">Mode</p>
+          <div class="modes" id="fbMode" role="group" aria-label="Mode"></div>
+        </div>
+        <div id="fbZoneBox" hidden>
+          <p class="label">Zone (frettes)</p>
+          <div class="modes zone" id="fbZone" role="group" aria-label="Zone (frettes)">
+            <select id="fbFrom" aria-label="Première frette de la zone"></select>
+            <span>à</span><select id="fbTo" aria-label="Dernière frette de la zone"></select>
+            <button type="button" class="ghost" id="fbZoneReset" hidden>Tout le manche</button>
+          </div>
+        </div>
       </div>
     </div>
     <section class="card">
@@ -623,11 +644,15 @@ const FB_MODES = [ { id:'see', name:'Normal' }, { id:'manual', name:'Manuel' }, 
 const FB_NOTES = [ { id:'all', name:'Toutes' }, { id:'naturals', name:'Naturelles' } ];
 // shown : ronds révélés en mode Manuel, sous la forme "corde-case"
 // target / revealed : rond tiré au sort en mode Aléatoire, et réponse affichée ou non
-const fb = { notation:'letters', notes:'all', mode:'see', shown:new Set(), target:null, revealed:false };
+// from / to : première et dernière frette de la zone où l'on tire en mode Aléatoire
+const fb = { notation:'letters', notes:'all', mode:'see', shown:new Set(), target:null, revealed:false, from:0, to:FB.frets };
 
 const parseKey = key => key.split('-').map(Number);                      // [corde, case]
 const noteIndex = key => { const [i,f] = parseKey(key); return (OPEN_SEMITONE[i] + f) % 12; };
 const isShownNote = n => fb.notes === 'all' || !NOTE_NAMES[n].includes('#');
+const inZone = key => { const f = parseKey(key)[1]; return f >= fb.from && f <= fb.to; };
+// un rond peut être tiré au sort s'il est dans la zone et que sa note est affichée
+const canDraw = key => key !== null && inZone(key) && isShownNote(noteIndex(key));
 
 // fond du manche (frettes, cordes, numéros, repères) : partagé par les onglets Fretboard et Scales
 function boardSvg(frets = FB.frets){
@@ -688,7 +713,8 @@ function drawFretboard(){
         ? `class="cell rev${target ? ' target' : ''}" data-key="${key}" tabindex="0" role="button" aria-pressed="${visible}" aria-label="${where} : ${said}"`
         : `class="cell" aria-label="${where} : ${said}"`;
       const size = label === '?' ? 27 : [0,21,19,17,15][label.length];
-      s += `<g ${attrs}><circle cx="${cx}" cy="${cy}" r="${target ? r+2 : r}" fill="${fill}" stroke="${stroke}" stroke-width="2"/>` +
+      const faded = fb.mode === 'random' && !inZone(key) ? ' opacity=".25"' : '';   // hors zone : estompé
+      s += `<g ${attrs}${faded}><circle cx="${cx}" cy="${cy}" r="${target ? r+2 : r}" fill="${fill}" stroke="${stroke}" stroke-width="2"/>` +
         (label ? `<text x="${cx}" y="${cy + size*.36}" text-anchor="middle" font-size="${size}" font-weight="700" fill="${ink}">${label}</text>` : '') +
         `</g>`;
     }
@@ -707,24 +733,34 @@ function renderFretboard(){
     (fb.mode === 'manual' && fb.shown.size
       ? '<button type="button" class="ghost" data-clear>Tout masquer</button>' : '');
 
+  // la zone n'existe qu'en mode Aléatoire ; son bouton de retour, que si elle est réduite
+  $('fbZoneBox').hidden = fb.mode !== 'random';
+  $('fbFrom').value = fb.from;
+  $('fbTo').value = fb.to;
+  $('fbZoneReset').hidden = fb.from === 0 && fb.to === FB.frets;
+
   const intro = {
-    see: 'Cases 0 (à vide) à 12 ; au-delà, les notes recommencent.',
+    see: 'Frettes 0 (à vide) à 12 ; au-delà, les notes recommencent.',
     manual: 'Clique sur un rond pour révéler sa note, reclique pour la cacher.',
-    random: 'Clique sur « ? » pour voir la réponse, puis reclique dessus pour une autre note.'
+    random: fb.target === null
+      ? 'Aucune note naturelle dans cette zone : élargis-la.'
+      : 'Clique sur « ? » pour voir la réponse, puis reclique dessus pour une autre note.'
   }[fb.mode];
   $('fbHint').textContent = intro + ' Corde 1 = e aiguë (en haut), corde 6 = E grave (en bas).' +
     (fb.notes === 'naturals' ? ' Les dièses et bémols sont masqués.' : '');
   drawFretboard();
 }
 
-// mode Aléatoire : tire un rond au hasard (jamais deux fois de suite le même)
+// mode Aléatoire : tire un rond au hasard dans la zone (jamais deux fois de suite le même, sauf s'il est seul)
 function newTarget(){
   const keys = [];
   for (let i=0;i<6;i++) for (let f=0;f<=FB.frets;f++){
     const key = `${i}-${f}`;
-    if (key !== fb.target && isShownNote(noteIndex(key))) keys.push(key);
+    if (canDraw(key)) keys.push(key);
   }
-  fb.target = keys[Math.floor(Math.random() * keys.length)];
+  const others = keys.filter(key => key !== fb.target);
+  const pool = others.length ? others : keys;
+  fb.target = pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
   fb.revealed = false;
 }
 
@@ -755,9 +791,26 @@ $('fbNotation').addEventListener('click', e => {
 $('fbNotes').addEventListener('click', e => {
   const b = e.target.closest('button[data-notes]'); if (!b) return;
   fb.notes = b.dataset.notes;
-  // le rond tiré porte une note qu'on vient de masquer : on en tire un autre
-  if (fb.mode === 'random' && !isShownNote(noteIndex(fb.target))) newTarget();
+  redrawTarget();
+});
+
+// après un changement de notes ou de zone : on garde le rond tiré s'il convient encore, sinon on en tire un autre
+function redrawTarget(){
+  if (fb.mode === 'random' && !canDraw(fb.target)) newTarget();
   renderFretboard(); scrollToTarget();
+}
+$('fbFrom').innerHTML = $('fbTo').innerHTML =
+  Array.from({ length:FB.frets+1 }, (_, f) => `<option value="${f}">${f}</option>`).join('');
+$('fbZone').addEventListener('change', e => {
+  const f = Number(e.target.value);
+  // l'autre borne suit si besoin, pour que la zone reste dans le bon sens
+  if (e.target.id === 'fbFrom'){ fb.from = f; fb.to = Math.max(fb.to, f); }
+  else { fb.to = f; fb.from = Math.min(fb.from, f); }
+  redrawTarget();
+});
+$('fbZoneReset').addEventListener('click', () => {
+  fb.from = 0; fb.to = FB.frets;
+  redrawTarget();
 });
 $('fbMode').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
