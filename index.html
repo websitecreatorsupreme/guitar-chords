@@ -102,10 +102,10 @@
   }
   .mode-field:has([data-fbmode="random"][aria-disabled="true"]:hover) .tooltip,
   .mode-field:has([data-fbmode="random"][aria-disabled="true"]:focus-visible) .tooltip{display:block}
-  /* Notation et Zone vont ensemble ; la zone est calée au bord droit */
+  /* Notation est calée au bord droit des deux onglets ; sur le fretboard, elle va à la ligne avec Zone */
   .field-pair{flex:1 1 auto; display:flex; flex-wrap:wrap; column-gap:45px; align-items:flex-end}
-  #fbZoneBox{margin-left:auto}
-  @media (max-width:699px){ #fbZoneBox{margin-left:0} }
+  #fbNotationBox,#scNotationBox{margin-left:auto}
+  @media (max-width:699px){ #fbNotationBox,#scNotationBox{margin-left:0} }
   /* zone : deux listes de frettes, au même gabarit que les pastilles */
   .modes.zone{flex-wrap:nowrap; align-items:center; font-size:.95rem; font-weight:600}
   .zone select{flex:1}
@@ -150,14 +150,14 @@
   .modes button.icon{padding:7px 11px}
   .modes button.icon svg{width:17px; height:17px; margin:0; vertical-align:-3px}
   .modes button svg.line{fill:none; stroke:currentColor; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round}
-  .controls .lecture{flex:1 1 520px}   /* assez large pour les vitesses : le manche ne bouge pas pendant la lecture */
-  /* fenêtre étroite : Lecture a toujours sa propre ligne, quel que soit le nombre de positions */
-  @media (min-width:700px) and (max-width:1179px){ .controls .lecture{flex-basis:100%} }
+  .controls .lecture{flex:0 1 505px}   /* place réservée aux vitesses : rien ne bouge quand la lecture démarre */
+  /* fenêtre étroite : Lecture passe sous Position et Notation, quel que soit le nombre de positions */
+  @media (min-width:700px) and (max-width:1179px){ .controls .lecture{order:1; flex-basis:100%} }
   .modes.positions{gap:6px}
   .controls .modes.positions button{min-width:40px; padding-left:0; padding-right:0}
   .controls .modes.positions button[data-pos="0"]{padding-left:11px; padding-right:11px}
   #scaleBoard .note.outside{opacity:.28}   /* notes hors de la position choisie */
-  .modes.speeds{margin:0 0 0 auto; flex-wrap:nowrap}   /* vitesses alignées à droite */
+  .modes.speeds{margin:0; flex-wrap:nowrap}   /* vitesses à la suite des boutons de lecture */
   #viewChords .card h2,#viewScales .card h2{font-size:1.3rem}   /* nom de l'accord ou de la gamme */
   #scDesc{margin-top:12px}
 
@@ -275,11 +275,7 @@
         <p class="tooltip" id="fbTip" role="tooltip">Vous devez sélectionner au moins deux notes en mode Manuel</p>
       </div>
       <div class="field-pair">
-        <div class="sep">
-          <p class="label">Notation</p>
-          <div class="modes notation" id="fbNotation" role="group" aria-label="Notation"></div>
-        </div>
-        <div id="fbZoneBox">
+        <div class="sep" id="fbZoneBox">
           <div class="label-row">
             <p class="label">Zone (frettes)</p>
             <button type="button" class="reset idle" id="fbZoneReset" aria-label="Réinitialiser la zone">Réinitialiser</button>
@@ -288,6 +284,10 @@
             <select id="fbFrom" aria-label="Première frette de la zone"></select>
             <span>à</span><select id="fbTo" aria-label="Dernière frette de la zone"></select>
           </div>
+        </div>
+        <div id="fbNotationBox">
+          <p class="label">Notation</p>
+          <div class="modes notation" id="fbNotation" role="group" aria-label="Notation"></div>
         </div>
       </div>
     </div>
@@ -309,10 +309,6 @@
         <p class="label">Position</p>
         <div class="modes positions" id="scPos" role="group" aria-label="Position sur le manche"></div>
       </div>
-      <div class="sep">
-        <p class="label">Notation</p>
-        <div class="modes notation" id="scDisplay" role="group" aria-label="Notation"></div>
-      </div>
       <div class="sep lecture">
         <p class="label">Lecture</p>
         <div class="modes">
@@ -323,6 +319,10 @@
           <button type="button" class="ghost" id="plStop" hidden>Stop</button>
           <span class="modes speeds" id="plSpeed" role="group" aria-label="Vitesse" hidden></span>
         </div>
+      </div>
+      <div id="scNotationBox">
+        <p class="label">Notation</p>
+        <div class="modes notation" id="scDisplay" role="group" aria-label="Notation"></div>
       </div>
     </div>
 
