@@ -150,7 +150,12 @@
   .modes button.icon{padding:7px 11px}
   .modes button.icon svg{width:17px; height:17px; margin:0; vertical-align:-3px}
   .modes button svg.line{fill:none; stroke:currentColor; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round}
-  .controls .lecture{flex:1 1 360px}
+  .controls .lecture{flex:1 1 520px}   /* assez large pour les vitesses : le manche ne bouge pas pendant la lecture */
+  /* fenêtre étroite : Lecture a toujours sa propre ligne, quel que soit le nombre de positions */
+  @media (min-width:700px) and (max-width:1119px){ .controls .lecture{flex-basis:100%} }
+  .modes.positions{gap:6px}
+  .controls .modes.positions button{min-width:40px; padding-left:0; padding-right:0}
+  #scaleBoard .note.outside{opacity:.28}   /* notes hors de la position choisie */
   .modes.speeds{margin:0 0 0 auto; flex-wrap:nowrap}   /* vitesses alignées à droite */
   #viewChords .card h2,#viewScales .card h2{font-size:1.3rem}   /* nom de l'accord ou de la gamme */
   #scDesc{margin-top:12px}
@@ -210,6 +215,8 @@
     .chords-layout .card{flex:1 1 0; min-height:200px; max-height:540px; position:relative}
     .chords-layout .card svg{position:absolute; top:44px; left:8px; width:calc(100% - 16px); height:calc(100% - 52px); max-width:none; max-height:none}
   }
+  /* petite fenêtre : la carte de la gamme peut se tasser un peu plus, pour tenir sans défiler */
+  @media (min-width:700px) and (max-width:1119px) and (min-height:600px) and (max-height:660px){ #viewScales .card{min-height:160px} }
 </style>
 </head>
 <body>
@@ -298,6 +305,10 @@
     <div class="types" id="scType" role="group" aria-label="Gamme"></div>
     <div class="controls">
       <div>
+        <p class="label">Position</p>
+        <div class="modes positions" id="scPos" role="group" aria-label="Position sur le manche"></div>
+      </div>
+      <div class="sep">
         <p class="label">Notation</p>
         <div class="modes notation" id="scDisplay" role="group" aria-label="Notation"></div>
       </div>
@@ -930,7 +941,7 @@ const SCALES = [
     desc:'Cinq notes au son ouvert, très présentes en country, folk et pop.' },
   { id:'pentamin', name:'Pentatonique mineure', steps:[0,3,5,7,10],
     desc:'La gamme classique pour commencer à improviser en rock et en blues.' },
-  { id:'blues', name:'Blues', steps:[0,3,5,6,7,10],
+  { id:'blues', name:'Blues', steps:[0,3,5,6,7,10], starts:[0,3,5,7,10],   // la blue note ne démarre pas de position
     desc:'La pentatonique mineure avec une note en plus, la « blue note » (♭5).' },
   { id:'harmonic', name:'Mineure harmonique', steps:[0,2,3,5,7,8,11],
     desc:'La mineure naturelle avec la 7e relevée, à la couleur orientale.' },
@@ -938,8 +949,8 @@ const SCALES = [
     desc:'La mineure avec 6e et 7e relevées (forme ascendante), courante en jazz.' }
 ];
 const SPEEDS = [ { id:1300, name:'Lent' }, { id:800, name:'Normal' }, { id:450, name:'Rapide' } ];   // ms par note
-// root : demi-ton de la tonique (C = 0, A = 9)
-const sc = { scale:'pentamin', root:9, display:'letters' };
+// root : demi-ton de la tonique (C = 0, A = 9) ; pos : position jouée sur le manche (1 = sur la tonique)
+const sc = { scale:'pentamin', root:9, pos:1, display:'letters' };
 // player : step = index de la note en cours dans la séquence (-1 : arrêté, toute la gamme est affichée)
 const player = { step:-1, timer:null, speed:800 };
 const ICONS = {
@@ -951,15 +962,19 @@ const ICONS = {
 /* ---------- position à jouer ---------- */
 const OPEN_PITCH = [0,5,10,15,19,24];     // hauteur de chaque corde à vide, en demi-tons au-dessus du E grave
 
-// Position qui part de la tonique sur la corde de E grave : on monte la gamme note par note
-// et on passe à la corde suivante dès que la note sort de la position (plus de 3 cases après la tonique).
-function buildPath(scale, root){
-  const start = (root - 4 + 12) % 12;     // case de la tonique sur le E grave
+// Il y a une position par note de la gamme sur la corde de E grave. La 1 part de la tonique, les suivantes
+// montent le long du manche, puis reprennent en bas une fois la case 12 atteinte.
+const positionSteps = scale => scale.starts || scale.steps;
+// Dans une position, on monte la gamme note par note et on passe à la corde suivante
+// dès que la note sort de la position (plus de 3 cases après la case de départ).
+function buildPath(scale, root, pos = 1){
+  const rootFret = (root - 4 + 12) % 12;                          // case de la tonique sur le E grave
+  const start = (rootFret + positionSteps(scale)[pos - 1]) % 12;  // case de départ de la position
   const top = start + 3;
   const path = [];
   let s = 0;
   for (let pitch = start; ; pitch++){
-    if (!scale.steps.includes((pitch - start) % 12)) continue;
+    if (!scale.steps.includes((pitch - rootFret + 12) % 12)) continue;
     while (s < 5 && pitch - OPEN_PITCH[s] > top && pitch - OPEN_PITCH[s+1] >= 0) s++;
     const f = pitch - OPEN_PITCH[s];
     if (s === 5 && f > top) return path;
@@ -969,7 +984,7 @@ function buildPath(scale, root){
 // aller puis retour (la note du sommet n'est jouée qu'une fois)
 const sequence = path => [...path, ...path.slice(0,-1).reverse()];
 const currentScale = () => SCALES.find(x => x.id === sc.scale);
-const currentPath = () => buildPath(currentScale(), sc.root);
+const currentPath = () => buildPath(currentScale(), sc.root, sc.pos);
 
 /* ---------- lecture ---------- */
 function pause(){ clearTimeout(player.timer); player.timer = null; }
@@ -1050,7 +1065,8 @@ function renderScales(){
   const solfege = sc.display === 'solfege';
   const names = solfege ? SOLFEGE : NOTE_NAMES;
   const active = player.step >= 0;          // lecture en cours ou en pause (sinon : toute la gamme)
-  const path = active ? currentPath() : [];
+  const path = currentPath();
+  const inPosition = new Set(path.map(p => `${p.s}-${p.f}`));
   const { nut, cell, top, gap, r } = FB;
   // certaines positions montent au-delà de la case 12 : le manche s'allonge alors
   const frets = Math.max(FB.frets, ...path.map(p => p.f));
@@ -1060,6 +1076,8 @@ function renderScales(){
   $('scRoot').innerHTML = segmented(
     Array.from({length:12}, (_,k) => (start + k) % 12).map(n => ({ id:n, name:names[n] })), 'data-root-note', sc.root);
   $('scDisplay').innerHTML = segmented(FB_NOTATIONS, 'data-display', sc.display);
+  $('scPos').innerHTML = segmented(
+    positionSteps(scale).map((_, k) => ({ id:k+1, name:k+1 })), 'data-pos', sc.pos);
 
   // un rond pour la note de la case f sur la corde i (rien si elle n'est pas dans la gamme)
   // seules les notes de la gamme sont dessinées ; la tonique est en bleu, la note en cours est entourée
@@ -1075,7 +1093,8 @@ function renderScales(){
     const fill = isRoot ? '#2563b0' : current ? 'var(--orange)' : 'var(--yellow)';
     const stroke = current ? 'var(--line)' : isRoot ? '#2563b0' : 'var(--dot-stroke)';
     const where = `Corde ${6-i}, ${f === 0 ? 'à vide' : 'case ' + f}`;
-    return `<g class="note${isRoot ? ' root' : ''}${current ? ' current' : ''}" data-s="${i}" data-f="${f}" tabindex="0" role="button" aria-label="${where} : ${label}">` +
+    const outside = !active && !inPosition.has(`${i}-${f}`);   // hors de la position choisie : estompée
+    return `<g class="note${isRoot ? ' root' : ''}${current ? ' current' : ''}${outside ? ' outside' : ''}" data-s="${i}" data-f="${f}" tabindex="0" role="button" aria-label="${where} : ${label}">` +
       `<circle cx="${cx}" cy="${cy}" r="${current ? r+3 : r}" fill="${fill}" stroke="${stroke}" stroke-width="${current ? 5 : 2}"/>` +
       `<text x="${cx}" y="${cy + size*.36}" text-anchor="middle" font-size="${size}" font-weight="700" fill="${isRoot ? '#fff' : '#2b1a08'}">${label}</text></g>`;
   };
@@ -1100,7 +1119,8 @@ function renderScales(){
   $('plReset').hidden = $('plStop').hidden = $('plSpeed').hidden = !active;
   $('plSpeed').innerHTML = segmented(SPEEDS, 'data-speed', player.speed);
 
-  const title = `${names[sc.root]} · ${scale.name}`;
+  const used = path.map(p => p.f);
+  const title = `${names[sc.root]} · ${scale.name} · Position ${sc.pos} (frettes ${Math.min(...used)} à ${Math.max(...used)})`;
   const notes = scale.steps.map(st => names[(sc.root + st) % 12]).join(', ');
   $('scTitle').textContent = title;
   $('scaleBoard').setAttribute('aria-label', `Gamme ${title} sur le manche : ${notes}`);
@@ -1119,11 +1139,18 @@ $('scaleBoard').addEventListener('keydown', e => {
 });
 $('scType').addEventListener('click', e => {
   const b = e.target.closest('button[data-scale]'); if (!b) return;
-  sc.scale = b.dataset.scale; resetPlayer(); renderScales();
+  sc.scale = b.dataset.scale;
+  if (sc.pos > positionSteps(currentScale()).length) sc.pos = 1;   // moins de positions dans cette gamme
+  resetPlayer(); renderScales();
 });
 $('scRoot').addEventListener('click', e => {
   const b = e.target.closest('button[data-root-note]'); if (!b) return;
   sc.root = Number(b.dataset.rootNote); resetPlayer(); renderScales();
+});
+$('scPos').addEventListener('click', e => {
+  const b = e.target.closest('button[data-pos]'); if (!b) return;
+  sc.pos = Number(b.dataset.pos); resetPlayer(); renderScales();
+  revealOnBoard('scaleBoard', '.note:not(.outside)');   // sur petit écran, on montre la position choisie
 });
 $('plStop').innerHTML = `${ICONS.stop}Stop`;
 $('plToggle').addEventListener('click', togglePlay);
