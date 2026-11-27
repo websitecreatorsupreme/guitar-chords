@@ -52,26 +52,21 @@
   /* 3. niveaux  +  4. mode d'affichage */
   .levels,.modes{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px}
   .levels button,.modes button{
-    font:inherit; font-size:.95rem; font-weight:600; padding:9px 16px; border:0; border-radius:999px;
+    font:inherit; font-size:.95rem; font-weight:600; padding:7px 14px; border:2px solid transparent; border-radius:999px;
     background:var(--chip); color:var(--ink); cursor:pointer; transition:background .15s;
   }
   .levels button:hover,.modes button:hover{background:var(--chip-hover)}
-  .levels button[aria-pressed="true"],.modes button[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
+  /* sélection : orange avec bordure, comme les accords et les gammes ; seule la notation reste en noir et blanc */
+  .levels button[aria-pressed="true"],.modes button[aria-pressed="true"]{background:var(--root-bg); color:var(--root-ink); border-color:var(--accent)}
+  .modes.notation button[aria-pressed="true"]{background:var(--ink); color:var(--bg); border-color:var(--ink)}
   button:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
 
   .card{background:var(--card); border-radius:18px; padding:14px 8px 6px; box-shadow:0 2px 14px rgba(0,0,0,.08)}
   .card h2{margin:0; text-align:center; font-size:1.7rem; font-weight:500; color:#111; letter-spacing:-.01em}
   .card svg{display:block; width:100%; max-width:380px; height:auto; margin:0 auto}
 
-  .info{margin-top:18px; display:grid; gap:16px}
+  .info{margin-top:18px}
   .tip{margin:0; font-size:1rem}
-  .tab{display:inline-grid; grid-template-columns:repeat(6,2.4rem); text-align:center; font-family:ui-monospace,Menlo,monospace}
-  .tab span{padding:2px 0}
-  .tab .names{color:var(--muted); font-size:.8rem}
-  .tab .fr{font-size:1.1rem; font-weight:700}
-  .legend{display:flex; flex-wrap:wrap; gap:6px 16px; font-size:.85rem; color:var(--muted); margin:0; padding:0; list-style:none}
-  .legend li{display:flex; align-items:center; gap:6px}
-  .legend svg{width:22px; height:22px; flex:none}
   .hint{font-size:.8rem; color:var(--muted); margin:0}
 
   /* titre et onglets sur la même ligne */
@@ -86,14 +81,34 @@
 
   /* fretboard */
   /* tous les réglages sur une même ligne quand la largeur le permet */
-  .controls{display:flex; flex-wrap:wrap; column-gap:20px; align-items:flex-end}
-  .controls .modes button{padding-left:12px; padding-right:12px}
+  .controls{position:relative; z-index:5; display:flex; flex-wrap:wrap; column-gap:45px; align-items:flex-end; clip-path:inset(-8px -8px -200px -8px)}
+  /* fin séparateur entre deux catégories ; en début de ligne, il tombe hors cadre et se trouve rogné */
+  .controls .sep{position:relative}
+  /* il a la hauteur des boutons : il commence sous le titre et s'arrête avant la marge du bas */
+  .controls .sep::before{content:""; position:absolute; left:-23px; top:calc(.72rem * 1.45 + 6px); bottom:12px; width:1px; background:var(--chip-hover)}
+  .controls .modes button{padding-left:10px; padding-right:10px}
   .modes button.ghost{background:none; border:2px solid var(--chip-hover); padding:7px 14px}
-  .mode-box{display:flex; flex-wrap:wrap; column-gap:20px}
-  /* fenêtre étroite : Mode a toujours sa propre ligne, pour que le manche ne bouge pas d'un mode à l'autre */
-  @media (min-width:700px) and (max-width:999px){ .mode-box{flex-basis:100%} }
-  /* zone du mode Aléatoire : deux listes de frettes, au même gabarit que les pastilles */
-  .modes.zone{align-items:center; font-size:.95rem; font-weight:600}
+  .modes button[aria-disabled="true"],.modes button[aria-disabled="true"]:hover{opacity:.4; cursor:not-allowed; background:var(--chip)}
+  /* « Réinitialiser » : petit lien à côté du titre ; sa place est réservée pour que rien ne bouge */
+  .label-row{display:flex; align-items:center; gap:10px; height:calc(.72rem * 1.45); margin-bottom:6px}
+  .label-row .label{margin:0}
+  .reset{font:inherit; font-size:.75rem; line-height:1; padding:0; border:0; background:none; color:var(--muted); text-decoration:underline; text-underline-offset:2px; cursor:pointer}
+  .reset:hover{color:var(--ink)}
+  .reset.idle{visibility:hidden}
+  /* explication au survol d'« Aléatoire » grisé : posée par-dessus la page, pour ne rien décaler */
+  .tooltip{
+    display:none; position:absolute; top:100%; right:0; width:max-content; max-width:100%; margin:-6px 0 0;
+    padding:7px 11px; border-radius:8px; background:#5f5b57; color:#fff; font-size:.78rem; box-shadow:0 4px 12px rgba(0,0,0,.14);
+  }
+  .mode-field:has([data-fbmode="random"][aria-disabled="true"]:hover) .tooltip,
+  .mode-field:has([data-fbmode="random"][aria-disabled="true"]:focus-visible) .tooltip{display:block}
+  /* Notation et Zone vont ensemble ; la zone est calée au bord droit */
+  .field-pair{flex:1 1 auto; display:flex; flex-wrap:wrap; column-gap:45px; align-items:flex-end}
+  #fbZoneBox{margin-left:auto}
+  @media (max-width:699px){ #fbZoneBox{margin-left:0} }
+  /* zone : deux listes de frettes, au même gabarit que les pastilles */
+  .modes.zone{flex-wrap:nowrap; align-items:center; font-size:.95rem; font-weight:600}
+  .zone select{flex:1}
   .zone select{
     font:inherit; height:40px; padding:0 28px 0 14px; border:0; border-radius:999px; cursor:pointer; color:var(--ink);
     -webkit-appearance:none; appearance:none; background-color:var(--chip);
@@ -102,6 +117,14 @@
   }
   .zone select:hover{background-color:var(--chip-hover)}
   .zone select:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
+  /* fenêtre moyenne : pastilles resserrées pour garder les filtres du fretboard sur le moins de lignes possible */
+  @media (min-width:700px) and (max-width:1209px){
+    .controls,.field-pair{column-gap:33px}
+    .controls .sep::before{left:-17px}
+    #viewFret .modes{gap:5px; font-size:.88rem}
+    #viewFret .modes button{font-size:.88rem; padding-left:7px; padding-right:7px}
+    #viewFret .zone select{height:2.4rem; padding-left:10px; padding-right:24px}   /* même hauteur que les pastilles */
+  }
   .scroll{overflow-x:auto}
   .card svg.board{max-width:none; min-width:700px; margin:0}
   .cell.rev{cursor:pointer}
@@ -109,11 +132,17 @@
   .cell:focus{outline:none}
   .cell:focus-visible circle{stroke:var(--line); stroke-width:4}
   #fbHint{margin-top:10px}
+  /* Notes « Manuel » : rangée des 12 notes, comme dans Chords en plus petit */
+  #fbNote{grid-template-columns:repeat(12,minmax(0,1fr)); gap:8px; margin-bottom:12px}
+  #fbNote button{font-size:1.05rem; padding:6px 0; border-radius:11px}
+  @media (max-width:699px){ #fbNote{grid-template-columns:repeat(6,minmax(0,1fr))} }
 
   /* lecture d'une gamme : mêmes pastilles que les filtres, avec une icône */
   .modes button svg{width:14px; height:14px; margin-right:7px; vertical-align:-2px; fill:currentColor}
-  .modes button.play{min-width:108px}
-  .modes button.icon{padding:9px 13px}
+  /* Play : orange plein, pour se distinguer des filtres */
+  .modes button.play{min-width:108px; background:var(--accent); color:var(--accent-ink); border-color:var(--accent)}
+  .modes button.play:hover{filter:brightness(1.07)}
+  .modes button.icon{padding:7px 11px}
   .modes button.icon svg{width:17px; height:17px; margin:0; vertical-align:-3px}
   .modes button svg.line{fill:none; stroke:currentColor; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round}
   .controls .lecture{flex:1 1 360px}
@@ -122,8 +151,13 @@
   #scDesc{margin-top:12px}
 
   /* onglet Chords : notes et accords en haut ; diagramme à gauche (2/3) ; notation, niveaux et légende à droite (1/3) */
-  #viewChords .roots{grid-template-columns:repeat(8,minmax(0,1fr)); margin-bottom:12px}
-  #viewChords .roots button{font-size:1.3rem; padding:8px 0}
+  #viewChords .roots{grid-template-columns:repeat(8,minmax(0,1fr))}
+  #viewChords .roots,#scRoot{margin-bottom:12px}
+  #viewChords .roots button,#scRoot button{font-size:1.3rem; padding:8px 0}
+  /* Scales : la tonique, même rangée et même hauteur que les notes de Chords */
+  #scRoot{grid-template-columns:repeat(12,minmax(0,1fr))}
+  @media (max-width:899px){ #scRoot{gap:8px} #scRoot button{font-size:1.05rem} }
+  @media (max-width:699px){ #scRoot{grid-template-columns:repeat(6,minmax(0,1fr))} }
   .chords-layout{
     display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1fr); column-gap:28px; align-items:start;
     grid-template-areas:"figure display" "figure levels" "figure info"; grid-template-rows:auto auto 1fr;
@@ -132,16 +166,21 @@
   .chords-layout #levelsBox{grid-area:levels}
   .chords-layout .info{grid-area:info}
   #viewChords .levels{flex-wrap:nowrap; gap:6px; margin-bottom:14px}
-  #viewChords .levels button{flex:1; padding:9px 0}
+  #viewChords .levels button{flex:1; padding:7px 0}
   .chords-layout .card{padding:10px 8px}
   .chords-layout .card svg{max-width:100%; max-height:420px}
   .chords-layout .display-box{grid-area:display}
   #viewChords .display-box .modes{flex-wrap:nowrap; gap:6px; margin-bottom:14px}
-  #viewChords .display-box .modes button{flex:1 1 auto; padding:9px 6px; white-space:nowrap}
-  .chords-layout .info{margin-top:0; gap:12px; align-content:start}
-  .chords-layout .tab{grid-template-columns:repeat(6,minmax(0,2.4rem))}
-  .chords-layout .legend{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px 10px}
-  /* accord sans niveaux : le bloc disparaît, les frettes et la légende remontent */
+  #viewChords .display-box .modes button{flex:1 1 auto; padding:7px 4px; white-space:nowrap}
+  .chords-layout .info{margin-top:0}
+  /* survol d'un rond ou d'une croix du diagramme : même bulle grise que sur le fretboard */
+  .chords-layout [data-tip]:focus{outline:none}
+  .chords-layout [data-tip]:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
+  #chordTip{
+    position:fixed; z-index:20; transform:translate(-50%,-100%); white-space:nowrap; pointer-events:none; margin:0;
+    padding:7px 11px; border-radius:8px; background:#5f5b57; color:#fff; font-size:.78rem; box-shadow:0 4px 12px rgba(0,0,0,.14);
+  }
+  /* accord sans niveaux : le bloc disparaît, le texte remonte */
   .chords-layout .off{display:none}
   @media (max-width:699px){
     #viewChords .roots{grid-template-columns:repeat(4,minmax(0,1fr))}
@@ -186,7 +225,7 @@
     <div class="chords-layout">
       <div class="display-box">
         <p class="label">Notation</p>
-        <div class="modes" id="modes" role="group" aria-label="Notation"></div>
+        <div class="modes notation" id="modes" role="group" aria-label="Notation"></div>
       </div>
 
       <div id="levelsBox">
@@ -196,42 +235,49 @@
 
       <div class="figure"><!-- diagramme -->
         <section class="card" aria-live="polite">
-          <svg id="diagram" viewBox="0 24 360 354" role="img"></svg>
+          <svg id="diagram" viewBox="0 24 360 354" role="group"></svg>
         </section>
       </div>
 
-      <div class="info"><!-- frettes et légende -->
-        <div><p class="label">Frettes (E A D G B e)</p><div class="tab" id="tab"></div></div>
-        <ul class="legend" id="legend"></ul>
+      <div class="info">
+        <p class="hint">Survolez les éléments pour comprendre ce qu'ils représentent.</p>
       </div>
     </div>
   </div><!-- /viewChords -->
+  <p id="chordTip" role="tooltip" hidden></p>
 
   <div id="viewFret" hidden>
     <div class="controls">
       <div>
-        <p class="label">Notation</p>
-        <div class="modes" id="fbNotation" role="group" aria-label="Notation"></div>
+        <p class="label">Notes</p>
+        <div class="modes" id="fbNotes" role="group" aria-label="Notes"></div>
       </div>
-      <div>
-        <p class="label">Notes affichées</p>
-        <div class="modes" id="fbNotes" role="group" aria-label="Notes affichées"></div>
-      </div>
-      <div class="mode-box">
-        <div>
+      <div class="sep mode-field">
+        <div class="label-row">
           <p class="label">Mode</p>
-          <div class="modes" id="fbMode" role="group" aria-label="Mode"></div>
+          <button type="button" class="reset idle" id="fbClear" aria-label="Réinitialiser les notes révélées">Réinitialiser</button>
         </div>
-        <div id="fbZoneBox" hidden>
-          <p class="label">Zone (frettes)</p>
+        <div class="modes" id="fbMode" role="group" aria-label="Mode"></div>
+        <p class="tooltip" id="fbTip" role="tooltip">Vous devez sélectionner au moins deux notes en mode Manuel</p>
+      </div>
+      <div class="field-pair">
+        <div class="sep">
+          <p class="label">Notation</p>
+          <div class="modes notation" id="fbNotation" role="group" aria-label="Notation"></div>
+        </div>
+        <div id="fbZoneBox">
+          <div class="label-row">
+            <p class="label">Zone (frettes)</p>
+            <button type="button" class="reset idle" id="fbZoneReset" aria-label="Réinitialiser la zone">Réinitialiser</button>
+          </div>
           <div class="modes zone" id="fbZone" role="group" aria-label="Zone (frettes)">
             <select id="fbFrom" aria-label="Première frette de la zone"></select>
             <span>à</span><select id="fbTo" aria-label="Dernière frette de la zone"></select>
-            <button type="button" class="ghost" id="fbZoneReset" hidden>Tout le manche</button>
           </div>
         </div>
       </div>
     </div>
+    <div class="roots" id="fbNote" role="group" aria-label="Notes à afficher" hidden></div>
     <section class="card">
       <div class="scroll">
         <svg id="fretboard" class="board" viewBox="0 0 880 384" role="group" aria-label="Manche de guitare, cases 0 à 12"></svg>
@@ -241,16 +287,15 @@
   </div>
 
   <div id="viewScales" hidden>
+    <div class="roots" id="scRoot" role="group" aria-label="Tonique"></div>
     <p class="label">Gamme</p>
     <div class="types" id="scType" role="group" aria-label="Gamme"></div>
-    <p class="label">Tonique</p>
-    <div class="types" id="scRoot" role="group" aria-label="Tonique"></div>
     <div class="controls">
       <div>
         <p class="label">Notation</p>
-        <div class="modes" id="scDisplay" role="group" aria-label="Notation"></div>
+        <div class="modes notation" id="scDisplay" role="group" aria-label="Notation"></div>
       </div>
-      <div class="lecture">
+      <div class="sep lecture">
         <p class="label">Lecture</p>
         <div class="modes">
           <button type="button" class="play" id="plToggle" aria-pressed="false">Play</button>
@@ -422,7 +467,7 @@ const CHORDS = [
    Utilitaires
    ============================================================ */
 const ROOTS = ['A','B','C','D','E','F','F#','G'];
-const STRING_NAMES = ['E','A','D','G','B','e'];
+const STRING_NAMES = ['E','A','D','G','B','E'];
 const OPEN_SEMITONE = [4,9,2,7,11,4];               // C = 0
 const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const LEVEL_ORDER = ['l1','l2','l3','l4','bar'];
@@ -440,8 +485,9 @@ function noteAt(i, fret, mode){
   return (mode === 'solfege' ? SOLFEGE : NOTE_NAMES)[n];
 }
 const fontFor = t => t.length <= 1 ? 22 : t.length === 2 ? 19 : t.length === 3 ? 16 : 13;
-const labelSvg = (cx, cy, t) =>
-  `<text x="${cx}" y="${cy + fontFor(t)*.36}" text-anchor="middle" font-size="${fontFor(t)}" font-weight="700" fill="#2b1a08">${t}</text>`;
+// texte centré dans une pastille : la ligne de base descend en proportion de la taille réellement utilisée
+const labelSvg = (cx, cy, t, size = fontFor(t)) =>
+  `<text x="${cx}" y="${cy + size*.36}" text-anchor="middle" font-size="${size}" font-weight="700" fill="#2b1a08">${t}</text>`;
 
 // Contrôle de cohérence (console) : chaque corde jouée et non à vide doit avoir un doigt.
 function checkData(){
@@ -469,7 +515,10 @@ function checkData(){
    ============================================================ */
 const LEFT=78, GAP=44, TOP=84, ROW=62, ROWS=4, R=19;
 const sx = i => LEFT + i*GAP;
-const dotFill = lab => (lab==='1' || lab==='3') ? 'var(--yellow)' : 'var(--orange)';
+
+// groupe survolable du diagramme : son explication s'affiche dans la bulle
+const FINGER_NAMES = { 1:'Index', 2:'Majeur', 3:'Annulaire', 4:'Auriculaire', T:'Pouce' };
+const tipped = (tip, inner) => `<g data-tip="${tip}" tabindex="0" role="img" aria-label="${tip}">${inner}</g>`;
 
 function drawDiagram(chord, level, mode){
   const base = chord.base;
@@ -498,10 +547,13 @@ function drawDiagram(chord, level, mode){
   const my = TOP - 34;
   level.frets.forEach((f,i) => {
     if (f === x){
-      s += `<path d="M${sx(i)-9} ${my-9} L${sx(i)+9} ${my+9} M${sx(i)+9} ${my-9} L${sx(i)-9} ${my+9}" stroke="var(--red)" stroke-width="3.5" stroke-linecap="round" fill="none"/>`;
+      // le disque invisible élargit la zone de survol autour de la croix
+      s += tipped('Non jouée', `<circle cx="${sx(i)}" cy="${my}" r="15" fill="transparent"/>` +
+        `<path d="M${sx(i)-9} ${my-9} L${sx(i)+9} ${my+9} M${sx(i)+9} ${my-9} L${sx(i)-9} ${my+9}" stroke="var(--red)" stroke-width="3.5" stroke-linecap="round" fill="none"/>`);
     } else if (f === 0){
-      s += `<circle cx="${sx(i)}" cy="${my}" r="15" fill="var(--orange)" stroke="var(--dot-stroke)" stroke-width="2"/>`;
-      if (mode !== 'fingers') s += labelSvg(sx(i), my, noteAt(i, 0, mode)).replace(/font-size="(\d+)"/, (m, n) => `font-size="${Math.min(+n, 15)}"`);
+      const note = mode === 'fingers' ? '' : noteAt(i, 0, mode);
+      s += tipped('Corde à vide', `<circle cx="${sx(i)}" cy="${my}" r="15" fill="var(--yellow)" stroke="var(--dot-stroke)" stroke-width="2"/>` +
+        (note ? labelSvg(sx(i), my, note, Math.min(fontFor(note), 15)) : ''));      // pastille plus petite
     }
   });
 
@@ -510,10 +562,9 @@ function drawDiagram(chord, level, mode){
   fingers.forEach(([fret,a,b,lab]) => {
     const cy = TOP + (fret - base + .5)*ROW;
     const x1 = sx(a), x2 = sx(b);
-    const fill = dotFill(lab);
     const shape = a===b
-      ? `<circle cx="${x1}" cy="${cy}" r="${R}" fill="${fill}" stroke="var(--dot-stroke)" stroke-width="2"/>`
-      : `<rect x="${x1-R}" y="${cy-R}" width="${x2-x1+2*R}" height="${2*R}" rx="${R}" fill="${fill}" stroke="var(--dot-stroke)" stroke-width="2"/>`;
+      ? `<circle cx="${x1}" cy="${cy}" r="${R}" fill="var(--yellow)" stroke="var(--dot-stroke)" stroke-width="2"/>`
+      : `<rect x="${x1-R}" y="${cy-R}" width="${x2-x1+2*R}" height="${2*R}" rx="${R}" fill="var(--yellow)" stroke="var(--dot-stroke)" stroke-width="2"/>`;
     let txt = '';
     if (mode === 'fingers') {
       txt = labelSvg((x1+x2)/2, cy, lab);
@@ -521,7 +572,7 @@ function drawDiagram(chord, level, mode){
       // une note par corde réellement tenue par ce doigt (sous un barré, les cordes tenues plus haut ont leur propre doigt)
       for (let i=a;i<=b;i++) if (level.frets[i] === fret) txt += labelSvg(sx(i), cy, noteAt(i, fret, mode));
     }
-    s += `<g>${shape}${txt}</g>`;
+    s += tipped(FINGER_NAMES[lab], shape + txt);
   });
 
   $('diagram').innerHTML = s;
@@ -573,36 +624,28 @@ function render(){
   // diagramme
   const title = multi ? `${chord.label} ${level.name}` : chord.label;
   $('diagram').setAttribute('aria-label', `Diagramme de ${title}`);
+  hideTip();
   drawDiagram(chord, level, state.mode);
-  renderLegend(state.mode);
-
-  // infos
-  $('tab').innerHTML =
-    STRING_NAMES.map(n => `<span class="names">${n}</span>`).join('') +
-    level.frets.map(f => `<span class="fr">${f}</span>`).join('');
 
   if (view === 'chords') setHash(`${chord.id}-${level.id}`);
 }
 
-const dotIcon = (fill, txt) =>
-  `<svg viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="${fill}" stroke="var(--dot-stroke)" stroke-width="1.5"/>` +
-  (txt ? `<text x="11" y="15.5" text-anchor="middle" font-size="12" font-weight="700" fill="#2b1a08">${txt}</text>` : '') + `</svg>`;
-function renderLegend(mode){
-  const fingerItems = [
-    [dotIcon('var(--yellow)','1'), 'index'],
-    [dotIcon('var(--orange)','2'), 'majeur'],
-    [dotIcon('var(--yellow)','3'), 'annulaire'],
-    [dotIcon('var(--orange)','4'), 'auriculaire'],
-    [dotIcon('var(--orange)','T'), 'pouce']
-  ];
-  const stringItems = [
-    [dotIcon('var(--orange)',''), 'corde à vide'],
-    [`<svg viewBox="0 0 22 22"><path d="M5 5L17 17M17 5L5 17" stroke="var(--red)" stroke-width="3" stroke-linecap="round"/></svg>`, 'non jouée']
-  ];
-  // la légende des doigts n'a de sens qu'en mode « Doigts »
-  $('legend').innerHTML = (mode === 'fingers' ? [...fingerItems, ...stringItems] : stringItems)
-    .map(([i,t]) => `<li>${i}${t}</li>`).join('');
+/* ---------- bulle d'explication du diagramme ---------- */
+function showTip(el){
+  const r = el.getBoundingClientRect(), tip = $('chordTip');
+  tip.textContent = el.dataset.tip;
+  tip.style.left = `${r.left + r.width/2}px`;
+  tip.style.top = `${r.top - 8}px`;
+  tip.hidden = false;
 }
+function hideTip(){ $('chordTip').hidden = true; }
+['mouseover','focusin'].forEach(type => $('diagram').addEventListener(type, e => {
+  const el = e.target.closest('[data-tip]'); if (el) showTip(el);
+}));
+['mouseout','focusout'].forEach(type => $('diagram').addEventListener(type, e => {
+  const el = e.target.closest('[data-tip]'); if (el && !el.contains(e.relatedTarget)) hideTip();
+}));
+addEventListener('scroll', hideTip, { passive:true });
 
 $('roots').addEventListener('click', e => {
   const b = e.target.closest('button[data-root]'); if (!b) return;
@@ -640,19 +683,22 @@ document.addEventListener('keydown', e => {
    ============================================================ */
 const FB = { nut:110, cell:62, frets:12, top:40, gap:52, r:22 };
 const FB_NOTATIONS = MODES.filter(m => m.id !== 'fingers');       // A B C / Do Ré Mi
-const FB_MODES = [ { id:'see', name:'Normal' }, { id:'manual', name:'Manuel' }, { id:'random', name:'Aléatoire' } ];
-const FB_NOTES = [ { id:'all', name:'Toutes' }, { id:'naturals', name:'Naturelles' } ];
-// shown : ronds révélés en mode Manuel, sous la forme "corde-case"
+const FB_MODES = [ { id:'see', name:'Normal' }, { id:'hide', name:'Masquer' }, { id:'random', name:'Aléatoire' } ];
+const FB_NOTES = [ { id:'all', name:'Toutes' }, { id:'naturals', name:'Naturelles' }, { id:'manual', name:'Manuel' } ];
+// picked : notes cochées avec « Manuel » (A au départ)
+// shown : ronds révélés en mode Masquer, sous la forme "corde-case"
 // target / revealed : rond tiré au sort en mode Aléatoire, et réponse affichée ou non
-// from / to : première et dernière frette de la zone où l'on tire en mode Aléatoire
-const fb = { notation:'letters', notes:'all', mode:'see', shown:new Set(), target:null, revealed:false, from:0, to:FB.frets };
+// from / to : première et dernière frette de la zone affichée
+const fb = { notation:'letters', notes:'all', picked:new Set([9]), mode:'see', shown:new Set(), target:null, revealed:false, from:0, to:FB.frets };
 
 const parseKey = key => key.split('-').map(Number);                      // [corde, case]
 const noteIndex = key => { const [i,f] = parseKey(key); return (OPEN_SEMITONE[i] + f) % 12; };
-const isShownNote = n => fb.notes === 'all' || !NOTE_NAMES[n].includes('#');
+const isShownNote = n => fb.notes === 'manual' ? fb.picked.has(n) : fb.notes === 'all' || !NOTE_NAMES[n].includes('#');
 const inZone = key => { const f = parseKey(key)[1]; return f >= fb.from && f <= fb.to; };
-// un rond peut être tiré au sort s'il est dans la zone et que sa note est affichée
-const canDraw = key => key !== null && inZone(key) && isShownNote(noteIndex(key));
+// un rond n'est sur le manche que s'il est dans la zone et que sa note est affichée
+const isOnBoard = key => inZone(key) && isShownNote(noteIndex(key));
+// avec des notes choisies à la main, le mode Aléatoire en demande au moins deux
+const canRandom = () => fb.notes !== 'manual' || fb.picked.size >= 2;
 
 // fond du manche (frettes, cordes, numéros, repères) : partagé par les onglets Fretboard et Scales
 function boardSvg(frets = FB.frets){
@@ -685,7 +731,7 @@ function boardSvg(frets = FB.frets){
 
 function drawFretboard(){
   const { nut, cell, frets, top, gap, r } = FB;
-  const manual = fb.mode === 'manual';
+  const hiding = fb.mode === 'hide';
   let s = boardSvg();
 
   // un rond par corde et par case (case 0 = corde à vide, à gauche du sillet)
@@ -694,10 +740,10 @@ function drawFretboard(){
     for (let f=0;f<=frets;f++){
       const cx = f === 0 ? nut - 40 : nut + (f-.5)*cell;
       const key = `${i}-${f}`;
-      if (!isShownNote(noteIndex(key))) continue;
+      if (!isOnBoard(key)) continue;
       const note = noteAt(i, f, fb.notation);
       const target = fb.mode === 'random' && key === fb.target;
-      const visible = fb.mode === 'see' || (manual && fb.shown.has(key)) || (target && fb.revealed);
+      const visible = fb.mode === 'see' || (hiding && fb.shown.has(key)) || (target && fb.revealed);
       let fill = !visible ? '#f2ede4' : note.includes('#') ? 'var(--orange)' : 'var(--yellow)';
       let stroke = visible ? 'var(--dot-stroke)' : '#bfb29e';
       let label = visible ? note : '';
@@ -709,12 +755,11 @@ function drawFretboard(){
       }
       const where = `Corde ${6-i}, ${f === 0 ? 'à vide' : 'case ' + f}`;
       const said = visible ? note : 'note masquée';
-      const attrs = manual || target
+      const attrs = hiding || target
         ? `class="cell rev${target ? ' target' : ''}" data-key="${key}" tabindex="0" role="button" aria-pressed="${visible}" aria-label="${where} : ${said}"`
         : `class="cell" aria-label="${where} : ${said}"`;
       const size = label === '?' ? 27 : [0,21,19,17,15][label.length];
-      const faded = fb.mode === 'random' && !inZone(key) ? ' opacity=".25"' : '';   // hors zone : estompé
-      s += `<g ${attrs}${faded}><circle cx="${cx}" cy="${cy}" r="${target ? r+2 : r}" fill="${fill}" stroke="${stroke}" stroke-width="2"/>` +
+      s += `<g ${attrs}><circle cx="${cx}" cy="${cy}" r="${target ? r+2 : r}" fill="${fill}" stroke="${stroke}" stroke-width="2"/>` +
         (label ? `<text x="${cx}" y="${cy + size*.36}" text-anchor="middle" font-size="${size}" font-weight="700" fill="${ink}">${label}</text>` : '') +
         `</g>`;
     }
@@ -728,25 +773,37 @@ const segmented = (list, attr, current) => list.map(o =>
 function renderFretboard(){
   $('fbNotation').innerHTML = segmented(FB_NOTATIONS, 'data-notation', fb.notation);
   $('fbNotes').innerHTML = segmented(FB_NOTES, 'data-notes', fb.notes);
-  // « Tout masquer » n'apparaît que s'il y a quelque chose à masquer
-  $('fbMode').innerHTML = segmented(FB_MODES, 'data-fbmode', fb.mode) +
-    (fb.mode === 'manual' && fb.shown.size
-      ? '<button type="button" class="ghost" data-clear>Tout masquer</button>' : '');
+  $('fbMode').innerHTML = segmented(FB_MODES, 'data-fbmode', fb.mode);
+  if (!canRandom()){                                       // grisé ; l'explication s'affiche au survol
+    const random = $('fbMode').querySelector('[data-fbmode="random"]');
+    random.setAttribute('aria-disabled', 'true');
+    random.setAttribute('aria-describedby', 'fbTip');
+  }
+  // « Réinitialiser » (Mode) n'apparaît que si un rond révélé est à l'écran
+  $('fbClear').classList.toggle('idle', !(fb.mode === 'hide' && [...fb.shown].some(isOnBoard)));
 
-  // la zone n'existe qu'en mode Aléatoire ; son bouton de retour, que si elle est réduite
-  $('fbZoneBox').hidden = fb.mode !== 'random';
+  // la rangée des notes n'existe qu'avec « Manuel »
+  const names = fb.notation === 'solfege' ? SOLFEGE : NOTE_NAMES;
+  const start = fb.notation === 'solfege' ? 0 : 9;         // A B C commence à A ; Do Ré Mi commence à Do
+  $('fbNote').hidden = fb.notes !== 'manual';
+  $('fbNote').innerHTML = Array.from({length:12}, (_, k) => (start + k) % 12).map(n =>
+    `<button type="button" data-note="${n}" aria-pressed="${fb.picked.has(n)}">${names[n]}</button>`).join('');
+
+  // zone : son « Réinitialiser » n'apparaît que si elle est réduite
   $('fbFrom').value = fb.from;
   $('fbTo').value = fb.to;
-  $('fbZoneReset').hidden = fb.from === 0 && fb.to === FB.frets;
+  $('fbZoneReset').classList.toggle('idle', fb.from === 0 && fb.to === FB.frets);
 
   const intro = {
     see: 'Frettes 0 (à vide) à 12 ; au-delà, les notes recommencent.',
-    manual: 'Clique sur un rond pour révéler sa note, reclique pour la cacher.',
-    random: fb.target === null
-      ? 'Aucune note naturelle dans cette zone : élargis-la.'
-      : 'Clique sur « ? » pour voir la réponse, puis reclique dessus pour une autre note.'
+    hide: 'Clique sur un rond pour révéler sa note, reclique pour la cacher.',
+    random: fb.target !== null
+      ? 'Clique sur « ? » pour voir la réponse, puis reclique dessus pour une autre note.'
+      : 'Aucune de ces notes dans cette zone : élargis-la.'
   }[fb.mode];
-  $('fbHint').textContent = intro + ' Corde 1 = e aiguë (en haut), corde 6 = E grave (en bas).' +
+  const noPick = fb.notes === 'manual' && !fb.picked.size;
+  $('fbHint').textContent = (noPick ? 'Sélectionne au moins une note.' : intro) +
+    ' Corde 1 = e aiguë (en haut), corde 6 = E grave (en bas).' +
     (fb.notes === 'naturals' ? ' Les dièses et bémols sont masqués.' : '');
   drawFretboard();
 }
@@ -756,7 +813,7 @@ function newTarget(){
   const keys = [];
   for (let i=0;i<6;i++) for (let f=0;f<=FB.frets;f++){
     const key = `${i}-${f}`;
-    if (canDraw(key)) keys.push(key);
+    if (isOnBoard(key)) keys.push(key);
   }
   const others = keys.filter(key => key !== fb.target);
   const pool = others.length ? others : keys;
@@ -774,7 +831,7 @@ function revealOnBoard(svgId, selector){
 const scrollToTarget = () => revealOnBoard('fretboard', '.target');
 
 function activateCell(key){
-  if (fb.mode === 'manual'){
+  if (fb.mode === 'hide'){
     if (!fb.shown.delete(key)) fb.shown.add(key);
   } else if (!fb.revealed){
     fb.revealed = true;                 // premier clic : la réponse
@@ -794,9 +851,19 @@ $('fbNotes').addEventListener('click', e => {
   redrawTarget();
 });
 
+$('fbNote').addEventListener('click', e => {
+  const b = e.target.closest('button[data-note]'); if (!b) return;
+  const n = Number(b.dataset.note);
+  if (!fb.picked.delete(n)) fb.picked.add(n);            // plusieurs notes à la fois
+  redrawTarget();
+});
+
 // après un changement de notes ou de zone : on garde le rond tiré s'il convient encore, sinon on en tire un autre
 function redrawTarget(){
-  if (fb.mode === 'random' && !canDraw(fb.target)) newTarget();
+  if (fb.mode === 'random'){
+    if (!canRandom()) fb.mode = 'see';                   // plus assez de notes : retour au mode Normal
+    else if (!(fb.target && isOnBoard(fb.target))) newTarget();
+  }
   renderFretboard(); scrollToTarget();
 }
 $('fbFrom').innerHTML = $('fbTo').innerHTML =
@@ -808,14 +875,15 @@ $('fbZone').addEventListener('change', e => {
   else { fb.to = f; fb.from = Math.min(fb.from, f); }
   redrawTarget();
 });
+$('fbClear').addEventListener('click', () => { fb.shown.clear(); renderFretboard(); });
 $('fbZoneReset').addEventListener('click', () => {
   fb.from = 0; fb.to = FB.frets;
   redrawTarget();
 });
 $('fbMode').addEventListener('click', e => {
-  const b = e.target.closest('button'); if (!b) return;
-  if (b.hasAttribute('data-clear')) fb.shown.clear();
-  else if (b.dataset.fbmode !== fb.mode){
+  const b = e.target.closest('button[data-fbmode]');
+  if (!b || b.getAttribute('aria-disabled') === 'true') return;
+  if (b.dataset.fbmode !== fb.mode){
     fb.mode = b.dataset.fbmode;
     fb.shown.clear();                                      // chaque révision démarre à vide
     if (fb.mode === 'random') newTarget();
@@ -1003,6 +1071,7 @@ function setView(v){
   $('viewChords').hidden = v !== 'chords';
   $('viewFret').hidden = v !== 'fretboard';
   $('viewScales').hidden = v !== 'scales';
+  hideTip();
   if (v !== 'scales') pause();     // la lecture d'une gamme s'arrête quand on change d'onglet
   document.querySelectorAll('#views button').forEach(b =>
     b.setAttribute('aria-pressed', b.dataset.view === v));
