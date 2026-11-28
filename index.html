@@ -258,6 +258,30 @@
   /* tablature validée : écrite directement sur le fond, dans la couleur du texte */
   #songText{margin:0; overflow-x:auto; color:var(--ink); tab-size:4; font:1rem/1.35 ui-monospace,SFMono-Regular,Menlo,monospace}
   .song-main{display:flex; flex-direction:column; min-height:0}
+  /* repères sur la tablature : une marge à gauche avec l'heure (et la partie), le défilement les suit */
+  .sheet-head{display:flex; flex-wrap:wrap; align-items:center; gap:6px 16px; margin-bottom:8px}
+  .sheet-head .label{margin:0}
+  .follow,.cue-sources button{font:inherit; font-size:.8rem; font-weight:600; padding:3px 11px; border:2px solid transparent; border-radius:999px; background:var(--chip); color:var(--ink); cursor:pointer}
+  .follow{margin-left:auto}
+  .follow:hover,.cue-sources button:hover{background:var(--chip-hover)}
+  .follow[aria-pressed="true"],.cue-sources button[aria-pressed="true"]{background:var(--ink); color:var(--bg); border-color:var(--ink)}
+  .cue-bar{position:sticky; top:0; z-index:4; display:flex; flex-direction:column; gap:10px; padding:10px 0 12px; margin-bottom:8px; background:var(--bg); border-bottom:1px solid var(--chip)}
+  .cue-bar p{margin:0; font-size:.85rem; color:var(--muted)}
+  .cue-sources,#cueParts{display:flex; flex-wrap:wrap; gap:6px}
+  .modes.cue-actions{margin:0; align-items:center; gap:14px}
+  /* les liens discrets restent des liens, même parmi des pastilles */
+  .modes.cue-actions button.reset,.modes.part-actions button.reset,.modes.form-actions button.reset{background:none; border:0; border-radius:0; min-width:0; padding:0; font-size:.75rem; font-weight:400; color:var(--muted)}
+  .modes.cue-actions button.play{min-width:0; padding:4px 16px; font-size:.85rem}
+  #songText.cued .tab-line{display:flex; align-items:center; min-height:1.35em; border-radius:6px}
+  #songText.cued .tab-line.now{background:var(--chip)}
+  #songText.cueing .tab-line{cursor:pointer}
+  #songText.cueing .tab-line:hover{background:var(--chip-hover)}
+  .tab-gutter{flex:none; width:8.25rem; display:flex; justify-content:flex-end; align-items:center; gap:4px; padding-right:12px; overflow:hidden}
+  .tab-code{white-space:pre}
+  .cue,.cue-remove{font:600 .72rem/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; border:0; border-radius:999px; background:var(--chip-hover); color:var(--ink); cursor:pointer}
+  .cue{min-width:0; padding:0 9px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .cue.on{background:var(--ink); color:var(--bg)}
+  .cue-remove{flex:none; width:1.35em; height:1.35em; padding:0}
   /* strumming pattern, discret : un petit bouton pour l'écouter, puis les coups et leur compte */
   .strum-row{display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; margin-bottom:8px}
   .strum-shift{display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; margin-bottom:14px; font-size:.8rem; color:var(--muted)}
@@ -416,7 +440,9 @@
     main.flow{height:auto; min-height:100vh; min-height:100dvh; display:block}
     main.flow #viewSongs,main.flow #viewChords{display:block}
     main.flow .song-grid{grid-template-rows:auto; align-items:start}
-    main.flow .song-side{overflow:visible}
+    /* le lecteur reste à l'écran pendant que la tablature défile */
+    main.flow .song-side{position:sticky; top:10px; align-self:start; max-height:calc(100vh - 20px); overflow:auto}
+    #songSheet.roomy{padding-bottom:55vh}                 /* la dernière partie peut remonter elle aussi */
     .song-side{min-height:0; overflow:auto}
 
     #viewFret .card,#viewScales .card{flex:1 1 0; min-height:190px; max-height:520px; display:flex; flex-direction:column; padding:10px 8px}
@@ -601,7 +627,22 @@
           <textarea id="songTab" wrap="off" spellcheck="false" aria-label="Tablature du morceau" placeholder="Colle ta tablature ici : elle reste enregistrée dans ce navigateur uniquement."></textarea>
         </section>
         <div id="songSheet" hidden>
-          <p class="label">Tablature</p>
+          <div class="sheet-head">
+            <p class="label">Tablature</p>
+            <button type="button" class="reset" id="cueStart" hidden>Synchroniser avec le morceau</button>
+            <button type="button" class="follow" id="followToggle" aria-pressed="true" hidden>Défilement auto</button>
+          </div>
+          <div class="cue-bar" id="cueBar" hidden>
+            <p>Choisis un repère, puis clique la ligne de la tablature où il commence.</p>
+            <div class="cue-sources" id="cueSources" role="group" aria-label="Repère à poser">
+              <button type="button" id="cueHere" data-source="" aria-pressed="true">Position actuelle · <span id="cueNow">0:00</span></button>
+              <span id="cueParts"></span>
+            </div>
+            <div class="modes cue-actions">
+              <button type="button" class="play" id="cueDone">Terminé</button>
+              <button type="button" class="reset" id="cueClear">Tout effacer</button>
+            </div>
+          </div>
           <pre id="songText"></pre>
         </div>
       </div>
@@ -1851,7 +1892,7 @@ function renderSheet(){
   $('songEditor').hidden = shown;
   $('songSheet').hidden = !shown;
   $('songTab').value = sheet.text;
-  $('songText').textContent = sheet.text;             // texte brut : rien de collé n'est interprété
+  renderTabView();
   $('songOk').classList.toggle('idle', !sheet.text.trim());
   $('page').classList.toggle('flow', view === 'songs' && shown);
 }
@@ -2213,6 +2254,7 @@ function choosePart(id){
   const audio = $('trackAudio'), chosen = partsOf(songId).find(p => p.id === id);
   if (chosen && part.selected === chosen.id && audio.paused === false) return audio.pause();
   part.selected = chosen ? chosen.id : null;
+  follow.hold = 0;
   renderParts(); renderMarks();
   if (!chosen) return clearTimeout(part.watch);
   audio.currentTime = chosen.start;
@@ -2237,7 +2279,7 @@ function renderParts(){
   renderReplay();
 }
 // autre morceau ou autre fichier : on revient à « Tout »
-function resetParts(){ clearTimeout(part.watch); part.selected = null; part.editing = null; part.loop = false; part.replayAt = 0; renderParts(); }
+function resetParts(){ clearTimeout(part.watch); part.selected = null; part.editing = null; part.loop = false; part.replayAt = 0; cueUI.active = false; renderParts(); renderTabView(); }
 function openPart(id){
   const found = partsOf(songId).find(p => p.id === id);
   part.editing = found ? found.id : 'new';
@@ -2250,7 +2292,7 @@ function openPart(id){
   renderParts(); renderMarks();
   $('pName').focus();
 }
-function closePart(){ part.editing = null; renderParts(); renderMarks(); }
+function closePart(){ part.editing = null; renderParts(); renderMarks(); renderTabView(); }
 function savePart(){
   const start = parseStamp($('pStart').value), end = parseStamp($('pEnd').value), length = $('trackAudio').duration;
   const refuse = message => { $('partNote').textContent = message; };
@@ -2271,6 +2313,9 @@ function savePart(){
 function deletePart(){
   if (!ask('Supprimer cette partie ?')) return;
   partsCache[songId] = partsOf(songId).filter(p => p.id !== part.editing);
+  if (cuesOf(songId).some(c => c.part === part.editing)){
+    cuesCache[songId] = cuesOf(songId).filter(c => c.part !== part.editing); saveCues(songId);
+  }
   saveParts(songId); closePart();
 }
 $('partList').addEventListener('click', e => {
@@ -2286,6 +2331,163 @@ $('partForm').addEventListener('click', e => {
   else if (b.id === 'pDelete') deletePart();
 });
 $('partForm').addEventListener('submit', e => { e.preventDefault(); savePart(); });
+
+/* ---------- repères sur la tablature : elle défile avec le morceau ----------
+   Un repère lie une ligne de la tablature à une partie du MP3 (il suit son début), ou à un instant précis.
+   La ligne est retrouvée par son texte si la tablature est modifiée. */
+const cuesKey = id => `guitar-chords:cues:${id}`;
+const cuesCache = {};
+const cueUI = { active:false, source:'' };                    // source : partie à poser ('' = la position actuelle)
+// on : défilement automatique ; hold : pause après un défilement à la main ; cue : repère en cours
+const follow = { on:true, hold:0, frame:null, cue:-1 };
+try { follow.on = localStorage.getItem('guitar-chords:follow') !== '0'; } catch(e){}
+function tidyCues(list){
+  return (Array.isArray(list) ? list : []).map(c => ({ line:c ? Number(c.line) : NaN, text:text(c && c.text).slice(0, 300),
+      time:c ? Number(c.time) || 0 : 0, part:text(c && c.part).replace(/[^\w-]/g, '') }))
+    .filter(c => Number.isInteger(c.line) && c.line >= 0 && c.time >= 0);
+}
+function parseCues(json){ try { return tidyCues(JSON.parse(json)); } catch(e){ return []; } }
+function readCues(id){ try { return parseCues(localStorage.getItem(cuesKey(id))); } catch(e){ return []; } }
+const cuesOf = id => cuesCache[id] || (cuesCache[id] = readCues(id));
+function saveCues(id){
+  try {
+    if (cuesOf(id).length) localStorage.setItem(cuesKey(id), JSON.stringify(cuesOf(id))); else localStorage.removeItem(cuesKey(id));
+  } catch(e){}
+}
+const tabLines = () => sheetOf(songId).text.replace(/\r/g, '').replace(/\n+$/, '').split('\n');
+function lineOf(lines, cue){
+  let best = -1;
+  lines.forEach((line, i) => { if (line === cue.text && (best < 0 || Math.abs(i - cue.line) < Math.abs(best - cue.line))) best = i; });
+  return best >= 0 ? best : Math.min(cue.line, lines.length - 1);
+}
+// les repères du morceau, dans l'ordre d'écoute ; k : leur rang dans la liste gardée
+function placedCues(){
+  const lines = tabLines(), parts = partsOf(songId);
+  return cuesOf(songId).map((cue, k) => {
+    const linked = cue.part ? parts.find(p => p.id === cue.part) : null;
+    return cue.part && !linked ? null
+      : { k, line:lineOf(lines, cue), time:linked ? linked.start : cue.time, name:linked ? linked.name : '', part:cue.part };
+  }).filter(Boolean).sort((a, b) => a.time - b.time || a.line - b.line);
+}
+const activeCue = (cues, time) => cues.filter(c => c.time <= time + .05).pop() || null;
+// où en est la tablature : un numéro de ligne, qui avance régulièrement d'un repère au suivant
+function tabPosition(cues, time){
+  const from = activeCue(cues, time);
+  if (!from) return null;
+  const next = cues[cues.indexOf(from) + 1];
+  if (!next || next.line <= from.line) return from.line;       // reprise d'un passage plus haut : saut le moment venu
+  return from.line + (next.line - from.line) * Math.min(1, Math.max(0, (time - from.time) / (next.time - from.time)));
+}
+function renderTabView(){
+  const box = $('songText'), cues = placedCues(), loaded = track.url !== null, lined = cueUI.active || cues.length > 0;
+  const now = loaded && !cueUI.active ? activeCue(cues, $('trackAudio').currentTime || 0) : null;
+  follow.cue = now ? now.k : -1;
+  $('cueStart').hidden = cueUI.active || !loaded;
+  $('cueStart').textContent = cues.length ? 'Modifier les repères' : 'Synchroniser avec le morceau';
+  $('followToggle').hidden = cueUI.active || !cues.length;
+  $('followToggle').setAttribute('aria-pressed', follow.on);
+  $('cueBar').hidden = !cueUI.active;
+  if (cueUI.active){
+    $('cueHere').setAttribute('aria-pressed', !cueUI.source);
+    $('cueNow').textContent = clock(Math.floor($('trackAudio').currentTime || 0));
+    $('cueParts').innerHTML = partsOf(songId).map(p => `<button type="button" data-source="${p.id}" aria-pressed="${p.id === cueUI.source}">` +
+      `${esc(p.name)}${cues.some(c => c.part === p.id) ? ' ✓' : ''}</button>`).join('');
+  }
+  box.className = lined ? `cued${cueUI.active ? ' cueing' : ''}` : '';
+  $('songSheet').classList.toggle('roomy', follow.on && !cueUI.active && cues.length > 0);
+  if (!lined){ box.textContent = sheetOf(songId).text; return; }     // texte brut : rien de collé n'est interprété
+  box.innerHTML = tabLines().map((line, i) => {
+    const chips = cues.filter(c => c.line === i).map(c =>
+      `<button type="button" class="cue${now && now.k === c.k ? ' on' : ''}" data-cue="${c.k}">${clock(Math.floor(c.time))}${c.name ? ` · ${esc(c.name)}` : ''}</button>` +
+      (cueUI.active ? `<button type="button" class="cue-remove" data-uncue="${c.k}" aria-label="Retirer ce repère">×</button>` : '')).join('');
+    return `<span class="tab-line${now && now.line === i ? ' now' : ''}" data-line="${i}"${cueUI.active ? ' tabindex="0"' : ''}>` +
+      `<span class="tab-gutter">${chips}</span><span class="tab-code">${esc(line)}</span></span>`;
+  }).join('');
+}
+function startCueing(){
+  const placed = cuesOf(songId).map(c => c.part), next = partsOf(songId).find(p => !placed.includes(p.id));
+  cueUI.active = true; cueUI.source = next ? next.id : '';
+  renderTabView();
+}
+function placeCue(line){
+  const lines = tabLines(), source = cueUI.source;
+  if (line < 0 || line >= lines.length) return;
+  const time = source ? 0 : Math.round(($('trackAudio').currentTime || 0) * 10) / 10;
+  // une partie n'a qu'un repère ; un nouvel instant tout proche remplace l'ancien
+  cuesCache[songId] = [...cuesOf(songId).filter(c => source ? c.part !== source : c.part || Math.abs(c.time - time) > .5),
+    { line, text:lines[line], time, part:source }];
+  saveCues(songId);
+  if (source){                                                 // puis la partie suivante à placer
+    const placed = cuesOf(songId).map(c => c.part), next = partsOf(songId).find(p => !placed.includes(p.id));
+    cueUI.source = next ? next.id : '';
+  }
+  renderTabView();
+}
+// un repère cliqué : on écoute à partir de là
+function playCue(k){
+  const cue = placedCues().find(c => c.k === k);
+  if (!cue || track.url === null) return;
+  part.selected = cue.part || null; follow.hold = 0;
+  renderParts(); renderMarks();
+  $('trackAudio').currentTime = cue.time;
+  playTrack(); watchPart();
+}
+// fait défiler la page jusqu'à l'endroit joué ; jump : d'un coup, sinon en douceur, image après image
+function followStep(jump){
+  if (view !== 'songs' || draft || cueUI.active || !follow.on || !sheetOf(songId).shown || Date.now() < follow.hold) return;
+  const position = tabPosition(placedCues(), $('trackAudio').currentTime || 0);
+  if (position === null || !window.scrollTo) return;
+  const index = Math.floor(position), row = $('songText').querySelector(`[data-line="${index}"]`);
+  if (!row) return;
+  const box = row.getBoundingClientRect(), here = window.scrollY;
+  const goal = Math.max(0, here + box.top + (position - index) * box.height - window.innerHeight * .3);
+  if (jump) return window.scrollTo({ top:goal, behavior:'smooth' });
+  const gap = goal - here;
+  if (Math.abs(gap) >= 1) window.scrollTo(0, here + Math.sign(gap) * Math.max(1, Math.abs(gap) * .12));
+}
+function markCue(){
+  if (cueUI.active){ $('cueNow').textContent = clock(Math.floor($('trackAudio').currentTime || 0)); return; }
+  if (!cuesOf(songId).length) return;
+  const now = activeCue(placedCues(), $('trackAudio').currentTime || 0);
+  if ((now ? now.k : -1) !== follow.cue) renderTabView();
+}
+function followLoop(){
+  follow.frame = null;
+  if ($('trackAudio').paused !== false || !cuesOf(songId).length) return;
+  markCue(); followStep(false);
+  follow.frame = requestAnimationFrame(followLoop);
+}
+function startFollowing(){ if (follow.frame === null) follow.frame = requestAnimationFrame(followLoop); }
+$('trackAudio').addEventListener('play', startFollowing);
+$('trackAudio').addEventListener('timeupdate', markCue);
+$('trackAudio').addEventListener('seeked', () => { markCue(); if ($('trackAudio').paused !== false) followStep(true); });
+$('cueStart').addEventListener('click', startCueing);
+$('cueDone').addEventListener('click', () => { cueUI.active = false; renderTabView(); });
+$('cueClear').addEventListener('click', () => {
+  if (!cuesOf(songId).length || !ask('Effacer tous les repères de cette tablature ?')) return;
+  cuesCache[songId] = []; saveCues(songId); renderTabView();
+});
+$('cueSources').addEventListener('click', e => {
+  const b = e.target.closest('button[data-source]'); if (!b) return;
+  cueUI.source = b.dataset.source; renderTabView();
+});
+$('songText').addEventListener('click', e => {
+  const b = e.target.closest('[data-uncue],[data-cue],[data-line]'); if (!b) return;
+  if (b.dataset.uncue !== undefined){
+    cuesCache[songId] = cuesOf(songId).filter((c, k) => k !== Number(b.dataset.uncue)); saveCues(songId); renderTabView();
+  } else if (b.dataset.cue !== undefined){ if (!cueUI.active) playCue(Number(b.dataset.cue)); }
+  else if (cueUI.active) placeCue(Number(b.dataset.line));
+});
+$('songText').addEventListener('keydown', e => {
+  if (cueUI.active && e.key === 'Enter' && e.target.dataset.line !== undefined){ e.preventDefault(); placeCue(Number(e.target.dataset.line)); }
+});
+$('followToggle').addEventListener('click', () => {
+  follow.on = !follow.on; follow.hold = 0;
+  try { localStorage.setItem('guitar-chords:follow', follow.on ? '1' : '0'); } catch(e){}
+  renderTabView(); followStep(true);
+});
+// un défilement à la main suspend le suivi quelques secondes
+['wheel', 'touchmove', 'keydown'].forEach(type => addEventListener(type, () => { follow.hold = Date.now() + 4000; }, { passive:true }));
 
 // draft : le morceau en cours de saisie (null hors du formulaire) ; dirty : il a été touché
 let draft = null, dirty = false;
@@ -2387,8 +2589,8 @@ function deleteSong(){
   }
   if (!ask('Supprimer ce morceau, avec sa tablature et son MP3 ?')) return;
   library.added = library.added.filter(s => s.id !== id); saveLibrary();
-  try { localStorage.removeItem(tabKey(id)); localStorage.removeItem(shownKey(id)); localStorage.removeItem(partsKey(id)); } catch(e){}
-  delete sheets[id]; delete tracks[id]; delete partsCache[id];
+  try { localStorage.removeItem(tabKey(id)); localStorage.removeItem(shownKey(id)); localStorage.removeItem(partsKey(id)); localStorage.removeItem(cuesKey(id)); } catch(e){}
+  delete sheets[id]; delete tracks[id]; delete partsCache[id]; delete cuesCache[id];
   trackStore('readwrite', store => store.delete(id)).catch(() => {});
   songId = SONGS[0].id; closeForm();
 }
@@ -2517,6 +2719,7 @@ function localData(){
     const sheet = sheetOf(id);
     if (sheet.text){ out[tabKey(id)] = sheet.text; out[shownKey(id)] = sheet.shown ? '1' : '0'; }
     if (partsOf(id).length) out[partsKey(id)] = JSON.stringify(partsOf(id));
+    if (cuesOf(id).length) out[cuesKey(id)] = JSON.stringify(cuesOf(id));
   });
   if (shownIds.size !== BASE_IDS.length || BASE_IDS.some(id => !shownIds.has(id))) out[SHOWN_KEY] = JSON.stringify([...shownIds]);
   if (strumShift) out[SHIFT_KEY] = String(strumShift);
@@ -2569,6 +2772,8 @@ function applyData(data, overwrite){
   allSongs().forEach(({ id }) => {
     const parts = parseParts(value(partsKey(id)));
     if (parts.length && (overwrite || !partsOf(id).length)){ partsCache[id] = parts; saveParts(id); }
+    const cues = parseCues(value(cuesKey(id)));
+    if (cues.length && (overwrite || !cuesOf(id).length)){ cuesCache[id] = cues; saveCues(id); }
     const tab = value(tabKey(id));
     if (!tab || (!overwrite && sheetOf(id).text)) return;
     sheets[id] = { text:tab, shown:value(shownKey(id)) === '1' };
