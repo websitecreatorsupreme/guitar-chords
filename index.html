@@ -261,18 +261,22 @@
   /* repères sur la tablature : une marge à gauche avec l'heure (et la partie), le défilement les suit */
   .sheet-head{display:flex; flex-wrap:wrap; align-items:center; gap:6px 16px; margin-bottom:8px}
   .sheet-head .label{margin:0}
-  .follow,.cue-sources button{font:inherit; font-size:.8rem; font-weight:600; padding:3px 11px; border:2px solid transparent; border-radius:999px; background:var(--chip); color:var(--ink); cursor:pointer}
-  .follow{margin-left:auto}
-  .follow:hover,.cue-sources button:hover{background:var(--chip-hover)}
-  .follow[aria-pressed="true"],.cue-sources button[aria-pressed="true"]{background:var(--ink); color:var(--bg); border-color:var(--ink)}
-  .cue-bar{position:sticky; top:0; z-index:4; display:flex; flex-direction:column; gap:10px; padding:10px 0 12px; margin-bottom:8px; background:var(--bg); border-bottom:1px solid var(--chip)}
-  .cue-bar p{margin:0; font-size:.85rem; color:var(--muted)}
-  .cue-sources,#cueParts{display:flex; flex-wrap:wrap; gap:6px}
-  .modes.cue-actions{margin:0; align-items:center; gap:14px}
+  .modes.track-actions.sync-start{margin-top:14px}
+  .sync-start:has(#cueStart[hidden]){display:none}
+  .cue-bar{display:flex; flex-direction:column; gap:10px; margin-top:12px}
+  .cue-bar p{margin:0; font-size:.82rem; color:var(--muted)}
+  .cue-bar p:empty{display:none}
+  .cue-bar p.cue-note{color:var(--ink)}
+  .modes.cue-actions{margin:0; align-items:center; gap:8px 12px}
+  .modes.cue-actions button.ghost{padding:3px 12px; font-size:.85rem}
   /* les liens discrets restent des liens, même parmi des pastilles */
   .modes.cue-actions button.reset,.modes.part-actions button.reset,.modes.form-actions button.reset{background:none; border:0; border-radius:0; min-width:0; padding:0; font-size:.75rem; font-weight:400; color:var(--muted)}
   .modes.cue-actions button.play{min-width:0; padding:4px 16px; font-size:.85rem}
   #songText.cued .tab-line{display:flex; align-items:center; min-height:1.35em; border-radius:6px}
+  /* l'étendue de la partie qu'on place, et la saisie en cours */
+  #songText.cued .tab-line.in-part{background:var(--chip); border-radius:0}
+  .tab-line.in-part .tab-gutter{align-self:stretch; box-shadow:inset -3px 0 var(--accent)}
+  .cue.pending{background:var(--accent); color:var(--accent-ink); padding:0 9px}
   #songText.cued .tab-line.now{background:var(--chip)}
   #songText.cueing .tab-line{cursor:pointer}
   #songText.cueing .tab-line:hover{background:var(--chip-hover)}
@@ -338,6 +342,11 @@
   .part-form input:focus-visible{outline:3px solid var(--accent); outline-offset:1px}
   .part-form p{margin:0; color:var(--ink)}
   .part-form p:empty{display:none}
+  .part-form .part-title{font-size:.85rem; font-weight:700}
+  .part-form .part-line{color:var(--muted)}
+  .part-col{display:flex; flex-direction:column; gap:6px; min-width:0}
+  .part-time button[aria-pressed="true"]{background:var(--ink); color:var(--bg); border-color:var(--ink)}
+  .song-side.working>:not(.track){display:none}   /* pendant la saisie, seul le lecteur reste */
   .modes.track-actions.part-actions{align-items:center; gap:8px}
   #trackTime{position:absolute; top:50%; right:8px; transform:translateY(-50%); padding:1px 6px; border-radius:6px; background:var(--bg); white-space:nowrap; pointer-events:none; font-size:.74rem; color:var(--ink); font-variant-numeric:tabular-nums; opacity:.85}
   .track-note{margin:4px 0 0; font-size:.8rem; color:var(--muted)}
@@ -366,29 +375,56 @@
   .song-meta{margin-bottom:12px}
   .song-meta:last-child{margin-bottom:0}
   @media (min-width:700px) and (max-height:740px){
-    .song-side{--cluster:15px}
+    .song-side{--cluster:11px}
+    .modes.track-actions.sync-start{margin-top:8px}
     .track-head,.track-name,.song-side>.label{margin-bottom:4px}
     .parts{margin-top:6px; gap:6px}
     .strum-row{margin-bottom:6px}
     .song-meta{margin-bottom:4px; line-height:1.35}
   }
+  @media (min-width:700px) and (max-height:740px){
+    .song-chords svg{max-height:88px}
+    .song-chords figcaption{font-size:1rem}
+  }
   .song-chords .unknown{margin:0; padding:14px 2px 18px; color:#7a6e61; font-size:2rem; font-weight:700; line-height:1.1}
   .song-chords .unknown small{display:block; font-size:.72rem; font-weight:600}
   /* barre des morceaux : un « + » pour en ajouter un, et « Modifier » pour celui affiché */
-  .song-bar{display:flex; flex-wrap:wrap; align-items:center; gap:8px 16px; margin-bottom:12px}
-  .song-bar .types{margin:0}
-  .backup{display:flex; flex-wrap:wrap; gap:6px 16px; margin-left:auto}
-  .backup-note{margin:-4px 0 10px; font-size:.8rem; color:var(--muted); text-align:right}
+  .song-bar{display:flex; align-items:flex-start; gap:16px; margin-bottom:12px}
+  .song-bar .types{flex:1; min-width:0; margin:0}
+  /* sauvegarde et import : deux icônes calées en haut à droite, à hauteur des titres ; rien ne les déplace */
+  .backup{position:relative; flex:none; display:flex; gap:8px; margin-top:2px}
+  .tool{position:relative; display:flex}
+  .backup button{display:flex; align-items:center; justify-content:center; width:38px; height:38px; padding:0; border:0; border-radius:50%; background:var(--chip); color:var(--ink); cursor:pointer; transition:background .15s}
+  .backup button:hover{background:var(--chip-hover)}
+  .backup svg{width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round}
+  /* explication au survol, et message après l'action : posés par-dessus la page */
+  .tool-tip,.backup-note{position:absolute; z-index:8; top:calc(100% + 6px); right:0; width:max-content; padding:7px 11px; border-radius:8px; background:#5f5b57; color:#fff; font-size:.78rem; box-shadow:0 4px 12px rgba(0,0,0,.14)}
+  .tool-tip{display:none; white-space:nowrap; pointer-events:none}
+  .tool:hover .tool-tip,.tool:has(:focus-visible) .tool-tip{display:block}
+  .backup-note{margin:0; max-width:min(340px,80vw); text-align:left; cursor:pointer}
   .backup-note:empty{display:none}
-  /* « Modifier la chanson » : seulement au survol de son titre (ou au clavier) */
+  .backup:has(.backup-note:not(:empty)) .tool-tip{display:none}
   .song-item{position:relative; display:inline-flex}
-  .types .song-item button.song-edit{
-    display:none; position:absolute; top:100%; left:50%; z-index:8; transform:translateX(-50%); white-space:nowrap;
-    padding:6px 12px; border:0; border-radius:8px; background:#5f5b57; color:#fff; font-size:.78rem; font-weight:500; box-shadow:0 4px 12px rgba(0,0,0,.18);
-  }
-  .types .song-item:hover button.song-edit,.types .song-item:has(:focus-visible) button.song-edit{display:block}
-  .types button.add{width:38px; height:38px; padding:0; font-size:1.3rem; line-height:1}
+  .types button.add{align-self:center; width:38px; height:38px; padding:0; font-size:1.3rem; line-height:1}
   /* formulaire d'un morceau */
+  #editView{display:flex; align-items:flex-start; gap:28px; padding-top:6px}
+  .edit-side{flex:none; width:260px; display:flex; flex-direction:column; gap:10px; padding-right:18px; border-right:2px solid var(--chip)}
+  .edit-side h2{margin:4px 0 0; font-size:1.25rem}
+  .edit-back{align-self:flex-start; font:inherit; font-size:.85rem; padding:0; border:0; background:none; color:var(--muted); cursor:pointer}
+  .edit-back:hover{color:var(--ink)}
+  .edit-new{font:inherit; font-size:.9rem; font-weight:600; padding:8px 12px; border:2px solid var(--chip-hover); border-radius:10px; background:none; color:var(--ink); cursor:pointer; text-align:left}
+  .edit-new:hover{background:var(--chip)}
+  #editList{display:flex; flex-direction:column; gap:3px}
+  #editList button{font:inherit; text-align:left; padding:7px 12px; border:0; border-radius:10px; background:none; color:var(--ink); cursor:pointer}
+  #editList button:hover{background:var(--chip)}
+  #editList button[aria-current="true"]{background:var(--chip-hover)}
+  #editList b,#editList span{display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  #editList b{font-size:.92rem; font-weight:600}
+  #editList span{font-size:.76rem; color:var(--muted)}
+  #editList span:empty{display:none}
+  .edit-main{flex:1; min-width:0}
+  .edit-main .song-form{margin-top:0}
+  .form-saved{font-size:.85rem; color:var(--muted)}
   .song-form{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); align-items:start; gap:0 40px; margin-top:calc(.72rem * 1.45 + 8px)}
   .song-form label{display:block; margin-bottom:12px; font-size:.72rem; text-transform:uppercase; letter-spacing:.09em; color:var(--muted)}
   .song-form input{
@@ -417,13 +453,15 @@
   .chord-row button{width:34px; height:34px; border:0; border-radius:999px; font-size:1.2rem; line-height:1; color:var(--ink); background:var(--chip); cursor:pointer}
   .chord-row button:hover,.strum-edit button:hover{background:var(--chip-hover)}
   .form-help{margin:10px 0 16px; font-size:.8rem; color:var(--muted)}
-  .strum-edit{display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-bottom:14px}
-  .strum-edit button{width:36px; padding:3px 0; border:0; border-radius:10px; font-family:inherit; font-size:1.15rem; font-weight:700; line-height:1.15; color:var(--ink); background:var(--chip); cursor:pointer}
+  .strum-edit{display:flex; flex-wrap:wrap; align-items:center; gap:4px; margin-bottom:14px}
+  .strum-edit button{width:34px; padding:3px 0; border:0; border-radius:10px; font-family:inherit; font-size:1.15rem; font-weight:700; line-height:1.15; color:var(--ink); background:var(--chip); cursor:pointer}
   .strum-edit button span{display:block; font-size:.7rem; font-weight:600; color:var(--muted)}
   .modes.form-actions{align-items:center; gap:10px; margin-top:4px}
   .form-actions .reset{margin-left:auto}
   @media (max-width:699px){
     .song-form{grid-template-columns:minmax(0,1fr)}
+    #editView{flex-direction:column; align-items:stretch; gap:18px}
+    .edit-side{width:100%; padding:0 0 14px; border-right:0; border-bottom:2px solid var(--chip)}
     .song-chords{grid-template-columns:repeat(4,minmax(0,1fr))}
     .song-grid{grid-template-columns:minmax(0,1fr)}
   }
@@ -440,9 +478,16 @@
     main.flow{height:auto; min-height:100vh; min-height:100dvh; display:block}
     main.flow #viewSongs,main.flow #viewChords{display:block}
     main.flow .song-grid{grid-template-rows:auto; align-items:start}
-    /* le lecteur reste à l'écran pendant que la tablature défile */
-    main.flow .song-side{position:sticky; top:10px; align-self:start; max-height:calc(100vh - 20px); overflow:auto}
-    #songSheet.roomy{padding-bottom:55vh}                 /* la dernière partie peut remonter elle aussi */
+    main.flow .song-side{overflow:visible}
+    /* édition : la liste et la chanson défilent chacune de leur côté */
+    #editView{flex:1; min-height:0; align-items:stretch}
+    .edit-side{min-height:0}
+    #editList{flex:1; min-height:0; overflow:auto}
+    .edit-main{min-height:0; overflow:auto; padding:2px 6px 2px 2px}
+    /* le haut de la page reste fixe : seule la tablature défile */
+    #songSheet{flex:1; min-height:0; display:flex; flex-direction:column}
+    #songText{flex:1; min-height:0; overflow:auto; overscroll-behavior:contain}
+    #songSheet.roomy #songText::after{content:""; display:block; height:45vh}   /* la dernière ancre peut remonter en haut */
     .song-side{min-height:0; overflow:auto}
 
     #viewFret .card,#viewScales .card{flex:1 1 0; min-height:190px; max-height:520px; display:flex; flex-direction:column; padding:10px 8px}
@@ -467,7 +512,7 @@
 </head>
 <body>
 <main id="page">
-  <header class="topbar">
+  <header class="topbar" id="topbar">
     <h1>Guitar chords</h1>
     <nav class="views" id="views" aria-label="Rubriques">
       <button type="button" data-view="chords" aria-pressed="true">Chords</button>
@@ -582,40 +627,22 @@
     <div class="song-bar">
       <div class="types" id="songList" role="group" aria-label="Morceau"></div>
       <div class="backup" id="backup">
-        <button type="button" class="reset" id="backupSave">Télécharger avec mes chansons</button>
-        <button type="button" class="reset" id="backupLoad">Importer une sauvegarde</button>
+        <span class="tool">
+          <button type="button" id="editSongs" aria-label="Modifier les chansons"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3a2.8 2.8 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5zM15 5l4 4"/></svg></button>
+          <span class="tool-tip" aria-hidden="true">Modifier les chansons</span>
+        </span>
+        <span class="tool">
+          <button type="button" id="backupSave" aria-label="Télécharger avec mes chansons"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2zM17 21v-8H7v8M7 3v5h8"/></svg></button>
+          <span class="tool-tip" aria-hidden="true">Télécharger avec mes chansons</span>
+        </span>
+        <span class="tool">
+          <button type="button" id="backupLoad" aria-label="Importer une sauvegarde"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M8 11l4 4 4-4M8 5H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-4"/></svg></button>
+          <span class="tool-tip" aria-hidden="true">Importer une sauvegarde</span>
+        </span>
         <input type="file" id="backupFile" accept=".html,text/html" hidden>
+        <p class="backup-note" id="backupNote" role="status"></p>
       </div>
     </div>
-    <p class="backup-note" id="backupNote" role="status"></p>
-    <form id="songForm" class="song-form" novalidate hidden>
-      <div>
-        <div class="form-pair">
-          <label>Titre<input type="text" id="fTitle" autocomplete="off"></label>
-          <label>Artiste<input type="text" id="fArtist" autocomplete="off"></label>
-        </div>
-        <p class="label">Accords et niveaux</p>
-        <div id="fChords"></div>
-        <button type="button" class="reset" id="fAddChord">+ Ajouter un accord</button>
-        <p class="form-help">« Autre accord » : frettes de la corde E grave à la E aiguë, par exemple x32010 (x : non jouée) ; doigts facultatifs, 1 à 4, T, ou - pour aucun.</p>
-      </div>
-      <div>
-        <p class="label">Strumming pattern : clique un coup pour le changer</p>
-        <div class="strum-edit" id="fStrum"></div>
-        <div class="form-pair">
-          <label>Tempo (bpm)<input type="number" id="fTempo" min="30" max="260"></label>
-          <label>Informations<input type="text" id="fInfo" placeholder="Accordage, capo, tonalité" autocomplete="off"></label>
-        </div>
-        <label>Lien vers les accords<input type="text" id="fSource" inputmode="url" placeholder="https://" autocomplete="off"></label>
-        <label>Lien vers la tablature<input type="text" id="fTabSource" inputmode="url" placeholder="https://" autocomplete="off"></label>
-        <div class="modes form-actions">
-          <button type="submit" class="play">Enregistrer</button>
-          <button type="button" class="ghost" id="fCancel">Annuler</button>
-          <button type="button" class="reset" id="fDelete">Supprimer</button>
-        </div>
-      </div>
-      <label class="form-tab">Tablature<textarea id="fTab" rows="8" wrap="off" spellcheck="false" placeholder="Colle ou modifie la tablature ici : elle reste enregistrée dans ce navigateur."></textarea></label>
-    </form>
     <div class="song-chords" id="songChords"></div>
     <div class="song-grid" id="songGrid">
       <div class="song-main">
@@ -629,24 +656,11 @@
         <div id="songSheet" hidden>
           <div class="sheet-head">
             <p class="label">Tablature</p>
-            <button type="button" class="reset" id="cueStart" hidden>Synchroniser avec le morceau</button>
-            <button type="button" class="follow" id="followToggle" aria-pressed="true" hidden>Défilement auto</button>
-          </div>
-          <div class="cue-bar" id="cueBar" hidden>
-            <p>Choisis un repère, puis clique la ligne de la tablature où il commence.</p>
-            <div class="cue-sources" id="cueSources" role="group" aria-label="Repère à poser">
-              <button type="button" id="cueHere" data-source="" aria-pressed="true">Position actuelle · <span id="cueNow">0:00</span></button>
-              <span id="cueParts"></span>
-            </div>
-            <div class="modes cue-actions">
-              <button type="button" class="play" id="cueDone">Terminé</button>
-              <button type="button" class="reset" id="cueClear">Tout effacer</button>
-            </div>
           </div>
           <pre id="songText"></pre>
         </div>
       </div>
-      <div class="song-side">
+      <div class="song-side" id="songSide">
         <div class="track">
           <div class="track-head">
             <p class="label">Morceau (MP3)</p>
@@ -672,16 +686,34 @@
             </div>
             <div class="parts" id="partList" role="group" aria-label="Parties du morceau"></div>
             <form class="part-form" id="partForm" novalidate hidden>
-              <label class="part-name">Nom de la partie<input type="text" id="pName" maxlength="40" placeholder="Intro, couplet, refrain…" autocomplete="off"></label>
-              <div class="part-time"><label>Début<input type="text" id="pStart" inputmode="decimal" placeholder="0:00" autocomplete="off"></label><button type="button" data-here="pStart" aria-label="Début : position actuelle">Ici</button></div>
-              <div class="part-time"><label>Fin<input type="text" id="pEnd" inputmode="decimal" placeholder="0:00" autocomplete="off"></label><button type="button" data-here="pEnd" aria-label="Fin : position actuelle">Ici</button></div>
+              <p class="part-title" id="pTitle"></p>
+              <label class="part-name" id="pNameBox">Nom de la partie<input type="text" id="pName" maxlength="40" placeholder="Intro, couplet, refrain…" autocomplete="off"></label>
+              <div class="part-col">
+                <div class="part-time"><label><span id="pStartText">Début</span><input type="text" id="pStart" inputmode="decimal" placeholder="0:00" autocomplete="off"></label><button type="button" data-here="pStart" aria-label="Reprendre la position actuelle">Ici</button></div>
+                <div class="part-time"><button type="button" id="pPreviewStart" data-preview="start" aria-pressed="false">▶ Aperçu du début</button></div>
+              </div>
+              <div class="part-col" id="pEndBox">
+                <div class="part-time"><label>Fin<input type="text" id="pEnd" inputmode="decimal" placeholder="0:00" autocomplete="off"></label><button type="button" data-here="pEnd" aria-label="Fin : position actuelle">Ici</button></div>
+                <div class="part-time"><button type="button" id="pPreviewEnd" data-preview="end" aria-pressed="false">▶ Aperçu de la fin</button></div>
+              </div>
+              <p class="part-line" id="pLine"></p>
               <p id="partNote" role="alert"></p>
               <div class="modes track-actions part-actions">
-                <button type="submit" class="play">Enregistrer</button>
+                <button type="submit" class="play">Valider</button>
                 <button type="button" class="ghost" id="pCancel">Annuler</button>
                 <button type="button" class="reset" id="pDelete">Supprimer</button>
               </div>
             </form>
+            <div class="modes track-actions sync-start"><button type="button" class="ghost" id="cueStart" hidden>Synchroniser avec le morceau</button></div>
+            <div class="cue-bar" id="cueBar" hidden>
+              <p id="cueHint"></p>
+              <p class="cue-note" id="cueNote" role="alert"></p>
+              <div class="modes cue-actions">
+                <button type="button" class="play" id="cueDone">Terminé</button>
+                <button type="button" class="ghost" id="cueAnchor" hidden>+ Ancre dans la partie</button>
+                <button type="button" class="reset" id="cueClear">Tout effacer</button>
+              </div>
+            </div>
           </div>
           <p class="track-note" id="trackNote" role="status"></p>
           <audio id="trackAudio" preload="metadata"></audio>
@@ -738,6 +770,47 @@
     </section>
 
     <p class="tip" id="scDesc"></p>
+  </div>
+
+  <!-- édition des chansons : une vue à part, la liste à gauche, la chanson choisie à droite -->
+  <div id="editView" hidden>
+    <aside class="edit-side">
+      <button type="button" class="edit-back" id="editBack">← Retour</button>
+      <h2>Mes chansons</h2>
+      <button type="button" class="edit-new" id="editNew">+ Nouvelle chanson</button>
+      <nav id="editList" aria-label="Chansons"></nav>
+    </aside>
+    <section class="edit-main">
+    <form id="songForm" class="song-form" novalidate hidden>
+      <div>
+        <div class="form-pair">
+          <label>Titre<input type="text" id="fTitle" autocomplete="off"></label>
+          <label>Artiste<input type="text" id="fArtist" autocomplete="off"></label>
+        </div>
+        <p class="label">Accords et niveaux</p>
+        <div id="fChords"></div>
+        <button type="button" class="reset" id="fAddChord">+ Ajouter un accord</button>
+        <p class="form-help">« Autre accord » : frettes de la corde E grave à la E aiguë, par exemple x32010 (x : non jouée) ; doigts facultatifs, 1 à 4, T, ou - pour aucun.</p>
+      </div>
+      <div>
+        <p class="label">Strumming pattern : clique un coup pour le changer</p>
+        <div class="strum-edit" id="fStrum"></div>
+        <div class="form-pair">
+          <label>Tempo (bpm)<input type="number" id="fTempo" min="30" max="260"></label>
+          <label>Informations<input type="text" id="fInfo" placeholder="Accordage, capo, tonalité" autocomplete="off"></label>
+        </div>
+        <label>Lien vers les accords<input type="text" id="fSource" inputmode="url" placeholder="https://" autocomplete="off"></label>
+        <label>Lien vers la tablature<input type="text" id="fTabSource" inputmode="url" placeholder="https://" autocomplete="off"></label>
+        <div class="modes form-actions">
+          <button type="submit" class="play">Enregistrer</button>
+          <button type="button" class="ghost" id="fCancel">Annuler</button>
+          <span class="form-saved" id="fSaved" role="status"></span>
+          <button type="button" class="reset" id="fDelete">Supprimer</button>
+        </div>
+      </div>
+      <label class="form-tab">Tablature<textarea id="fTab" rows="8" wrap="off" spellcheck="false" placeholder="Colle ou modifie la tablature ici : elle reste enregistrée dans ce navigateur."></textarea></label>
+    </form>
+    </section>
   </div>
 </main>
 
@@ -1894,7 +1967,7 @@ function renderSheet(){
   $('songTab').value = sheet.text;
   renderTabView();
   $('songOk').classList.toggle('idle', !sheet.text.trim());
-  $('page').classList.toggle('flow', view === 'songs' && shown);
+  if (view === 'songs') $('page').classList.toggle('flow', false);
 }
 function showSheet(shown){
   sheetOf(songId).shown = shown; saveShown(songId, shown); renderSheet();
@@ -2183,13 +2256,16 @@ $('trackReplay').addEventListener('click', pressReplay);
 /* ---------- les parties du MP3 : des passages nommés, qu'on peut jouer seuls ---------- */
 const partsKey = id => `guitar-chords:parts:${id}`;
 const partsCache = {};
-// selected : la partie jouée (null = tout le morceau) ; editing : celle en cours de saisie ('new' pour une nouvelle)
-// loop : ce qui est joué (la partie, ou tout le morceau) recommence sans fin ; replayAt : dernier clic sur Replay
-const part = { selected:null, editing:null, watch:null, loop:false, replayAt:0 };
+// selected : la partie jouée (null = tout le morceau) ; editing : la saisie ouverte (id, 'new' ou 'anchor', null sinon)
+// loop : ce qui est joué recommence sans fin ; replayAt : dernier clic sur Replay
+// pendant une saisie — endAuto : la fin n'a pas été choisie ; line : ligne cliquée dans la tablature ;
+// autoName : nom lu dans la tablature ; preview : l'aperçu en cours
+const part = { selected:null, editing:null, watch:null, loop:false, replayAt:0, endAuto:true, line:null, autoName:'', preview:null, previewTimer:null };
 const DOUBLE_CLICK = 500;                                    // deux clics à moins d'une demi-seconde
+const PREVIEW = 4;                                           // durée d'un aperçu, en secondes
 function tidyParts(list){
   return (Array.isArray(list) ? list : []).map(p => ({ id:text(p && p.id).replace(/[^\w-]/g, ''), name:text(p && p.name).slice(0, 40),
-      start:Number(p && p.start), end:Number(p && p.end) }))
+      start:Number(p && p.start), end:Number(p && p.end), auto:!!(p && p.auto) }))   // auto : fin non choisie
     .filter(p => p.id && p.start >= 0 && p.end > p.start && Number.isFinite(p.end))
     .sort((a, b) => a.start - b.start || a.end - b.end);
 }
@@ -2202,6 +2278,16 @@ function saveParts(id){
     return true;
   } catch(e){ return false; }
 }
+// les parties dont la fin n'est pas choisie vont jusqu'au début de la suivante, sinon jusqu'au bout du morceau
+function fitParts(list, length){
+  const sorted = tidyParts(list);
+  return tidyParts(sorted.map(p => {
+    if (!p.auto) return p;
+    const next = sorted.find(q => q.start > p.start + .05), end = next ? next.start : length;
+    return Number.isFinite(end) && end > p.start ? { ...p, end } : p;
+  }));
+}
+const newPartId = () => `part-${Math.random().toString(36).slice(2, 10)}`;
 // « 1:05,5 » ; la saisie accepte aussi « 1:05 » ou des secondes seules
 function stamp(seconds){
   const t = Math.round(seconds * 10) / 10, minutes = Math.floor(t / 60);
@@ -2239,6 +2325,8 @@ function setLoop(on){ part.loop = on; renderReplay(); watchPart(); }
 function replayTrack(){
   const chosen = selectedPart();
   $('trackAudio').currentTime = chosen ? chosen.start : 0;
+  renderTabView();
+  if (chosen) showAnchor(anchorOfPart(placedCues(), chosen));
   playTrack(); watchPart(); renderTrack();
 }
 // un clic : rejouer ; un second aussitôt : en boucle ; un clic pendant la boucle : l'arrêter
@@ -2254,10 +2342,10 @@ function choosePart(id){
   const audio = $('trackAudio'), chosen = partsOf(songId).find(p => p.id === id);
   if (chosen && part.selected === chosen.id && audio.paused === false) return audio.pause();
   part.selected = chosen ? chosen.id : null;
-  follow.hold = 0;
-  renderParts(); renderMarks();
+  renderParts(); renderMarks(); renderTabView();
   if (!chosen) return clearTimeout(part.watch);
   audio.currentTime = chosen.start;
+  renderTabView(); showAnchor(anchorOfPart(placedCues(), chosen));
   playTrack(); watchPart();
 }
 function renderMarks(){
@@ -2267,83 +2355,174 @@ function renderMarks(){
         `width:${(100 * (Math.min(p.end, length) - p.start) / length).toFixed(2)}%"></i>`).join('')
     : '';
 }
+// les pastilles servent à écouter une partie ; pendant la synchronisation, à choisir celle qu'on place
 function renderParts(){
-  const list = partsOf(songId), editing = part.editing !== null;
+  const list = partsOf(songId), editing = part.editing !== null, syncing = cueUI.active;
   $('partList').hidden = editing;
   $('partForm').hidden = !editing;
-  $('partList').innerHTML = !list.length ? '<button type="button" data-addpart>+ Marquer une partie</button>'
-    : `<button type="button" data-part="" aria-pressed="${!selectedPart()}">Tout</button>` + list.map(p =>
-        `<span class="part-item"><button type="button" data-part="${p.id}" aria-pressed="${p.id === part.selected}" title="${stamp(p.start)} – ${stamp(p.end)}">${esc(p.name)}</button>` +
-        `<button type="button" class="part-edit" data-editpart="${p.id}">Modifier</button></span>`).join('') +
-      '<button type="button" class="add" data-addpart aria-label="Marquer une partie" title="Marquer une partie">+</button>';
+  const placed = syncing ? cuesOf(songId).map(c => c.part) : [];
+  const pills = list.map(p => `<span class="part-item"><button type="button" data-part="${p.id}" aria-pressed="${p.id === (syncing ? cueUI.source : part.selected)}" ` +
+    `title="${stamp(p.start)} – ${stamp(p.end)}">${esc(p.name)}${placed.includes(p.id) ? ' ✓' : ''}</button>` +
+    `<button type="button" class="part-edit" data-editpart="${p.id}">Modifier</button></span>`).join('');
+  const all = list.length && !syncing ? `<button type="button" data-part="" aria-pressed="${!selectedPart()}">Tout</button>` : '';
+  const add = syncing ? '<button type="button" data-addpart>+ Nouvelle partie</button>'
+    : !list.length ? '<button type="button" data-addpart>+ Marquer une partie</button>'
+    : '<button type="button" class="add" data-addpart aria-label="Marquer une partie" title="Marquer une partie">+</button>';
+  $('partList').innerHTML = all + pills + add;
   renderReplay();
 }
 // autre morceau ou autre fichier : on revient à « Tout »
-function resetParts(){ clearTimeout(part.watch); part.selected = null; part.editing = null; part.loop = false; part.replayAt = 0; cueUI.active = false; renderParts(); renderTabView(); }
+function resetParts(){
+  clearTimeout(part.watch); stopPreview();
+  Object.assign(part, { selected:null, editing:null, line:null, loop:false, replayAt:0 });
+  cueUI.active = false;
+  renderParts(); renderTabView();
+}
+// la fin proposée : le début de la partie suivante, sinon le bout du morceau
+function fillEnd(){
+  const start = parseStamp($('pStart').value);
+  if (!part.endAuto || start === null) return;
+  const next = partsOf(songId).find(p => p.id !== part.editing && p.start > start + .05), end = next ? next.start : $('trackAudio').duration;
+  $('pEnd').value = Number.isFinite(end) ? stamp(end) : '';
+}
+function openPartForm(editing, values){
+  endPreview();
+  Object.assign(part, { editing, line:values.line, endAuto:values.endAuto, autoName:'', selected:null });
+  clearTimeout(part.watch);                                  // pendant la saisie, la lecture continue librement
+  $('pName').value = values.name;
+  $('pStart').value = stamp(values.start);
+  $('pEnd').value = values.end === null ? '' : stamp(values.end);
+  fillEnd();
+  $('pDelete').hidden = editing === 'new' || editing === 'anchor';
+  $('partNote').textContent = '';
+  renderParts(); renderMarks(); renderTabView();
+}
 function openPart(id){
   const found = partsOf(songId).find(p => p.id === id);
-  part.editing = found ? found.id : 'new';
-  part.selected = null; clearTimeout(part.watch);             // pendant la saisie, la lecture continue librement
-  $('pName').value = found ? found.name : '';
-  $('pStart').value = stamp(found ? found.start : $('trackAudio').currentTime || 0);
-  $('pEnd').value = found ? stamp(found.end) : '';
-  $('pDelete').hidden = !found;
-  $('partNote').textContent = '';
-  renderParts(); renderMarks();
-  $('pName').focus();
+  const placed = found && cueUI.active ? placedCues().find(c => c.part === found.id) : null;
+  openPartForm(found ? found.id : 'new', found
+    ? { name:found.name, start:found.start, end:found.end, endAuto:found.auto, line:placed ? placed.line : null }
+    : { name:'', start:$('trackAudio').currentTime || 0, end:null, endAuto:true, line:null });
+  $('pName').focus({ preventScroll:true });
 }
-function closePart(){ part.editing = null; renderParts(); renderMarks(); renderTabView(); }
+// une ancre de plus dans la partie choisie : à tel moment, la tablature se place sur telle ligne
+function openAnchor(){
+  const chosen = partsOf(songId).find(p => p.id === cueUI.source), now = $('trackAudio').currentTime || 0;
+  if (!chosen) return;
+  openPartForm('anchor', { name:'', start:within(chosen, now) ? now : chosen.start, end:null, endAuto:false, line:null });
+  $('pStart').focus({ preventScroll:true });
+}
+function closePart(){
+  endPreview();
+  Object.assign(part, { editing:null, line:null });
+  renderParts(); renderMarks(); renderTabView();
+}
+const refusePart = message => { $('partNote').textContent = message; };
+function setCue(cue, replaced){
+  cuesCache[songId] = [...cuesOf(songId).filter(c => !replaced(c)), { ...cue, text:tabLines()[cue.line] }];
+  saveCues(songId);
+}
+const setPartCue = (id, line) => setCue({ line, time:0, part:id, within:'' }, c => c.part === id);
 function savePart(){
+  if (part.editing === 'anchor') return saveAnchor();
   const start = parseStamp($('pStart').value), end = parseStamp($('pEnd').value), length = $('trackAudio').duration;
-  const refuse = message => { $('partNote').textContent = message; };
-  if (start === null) return refuse('Début : écris un temps comme 1:05 ou 1:05,5.');
-  if (end === null) return refuse($('pEnd').value.trim() ? 'Fin : écris un temps comme 1:05 ou 1:05,5.'
+  if (start === null) return refusePart('Début : écris un temps comme 1:05 ou 1:05,5.');
+  if (end === null) return refusePart($('pEnd').value.trim() ? 'Fin : écris un temps comme 1:05 ou 1:05,5.'
     : 'Indique la fin : écoute, puis clique sur « Ici » au bon moment.');
-  if (Number.isFinite(length) && start >= length) return refuse('Le début dépasse la durée du morceau.');
+  if (Number.isFinite(length) && start >= length) return refusePart('Le début dépasse la durée du morceau.');
   const stop = Number.isFinite(length) ? Math.min(end, length) : end;
-  if (stop <= start) return refuse('La fin doit venir après le début.');
+  if (stop <= start) return refusePart('La fin doit venir après le début.');
+  if (cueUI.active && part.line === null) return refusePart('Clique dans la tablature la ligne où la partie commence.');
   const list = partsOf(songId), old = list.find(p => p.id === part.editing);
-  const saved = { id:old ? old.id : `part-${Math.random().toString(36).slice(2, 10)}`,
-    name:$('pName').value.trim() || `Partie ${list.length + (old ? 0 : 1)}`, start, end:stop };
-  partsCache[songId] = tidyParts([...list.filter(p => p !== old), saved]);
+  const saved = { id:old ? old.id : newPartId(), name:$('pName').value.trim() || `Partie ${list.length + (old ? 0 : 1)}`,
+    start, end:stop, auto:part.endAuto };
+  partsCache[songId] = fitParts([...list.filter(p => p !== old), saved], length);
   const kept = saveParts(songId);
+  if (cueUI.active){ setPartCue(saved.id, part.line); Object.assign(cueUI, { source:saved.id, note:'' }); }
   closePart();
   if (!kept){ track.note = 'Ce navigateur ne peut pas garder les parties.'; renderTrack(); }
 }
+function saveAnchor(){
+  const chosen = partsOf(songId).find(p => p.id === cueUI.source), time = parseStamp($('pStart').value);
+  if (!chosen) return closePart();
+  if (time === null) return refusePart('Moment : écris un temps comme 1:05 ou 1:05,5.');
+  if (time <= chosen.start + .05 || time >= chosen.end) return refusePart(`Choisis un moment entre ${stamp(chosen.start)} et ${stamp(chosen.end)}.`);
+  if (part.line === null) return refusePart('Clique dans la tablature la ligne à afficher à ce moment.');
+  setCue({ line:part.line, time:Math.round(time * 10) / 10, part:'', within:chosen.id }, c => !c.part && Math.abs(c.time - time) <= .5);
+  closePart();
+}
 function deletePart(){
+  const id = part.editing;
   if (!ask('Supprimer cette partie ?')) return;
-  partsCache[songId] = partsOf(songId).filter(p => p.id !== part.editing);
-  if (cuesOf(songId).some(c => c.part === part.editing)){
-    cuesCache[songId] = cuesOf(songId).filter(c => c.part !== part.editing); saveCues(songId);
-  }
+  partsCache[songId] = fitParts(partsOf(songId).filter(p => p.id !== id), $('trackAudio').duration);
+  cuesCache[songId] = cuesOf(songId).filter(c => c.part !== id && c.within !== id); saveCues(songId);
+  if (cueUI.source === id) cueUI.source = '';
   saveParts(songId); closePart();
+}
+// aperçu : quelques secondes au début (ou à la fin) de la saisie, pour ajuster avant de valider
+function stopPreview(){ clearTimeout(part.previewTimer); part.preview = null; }
+// quitter ou changer la saisie coupe aussi le son d'un aperçu en cours
+function endPreview(){ if (part.preview) pauseTrack(); stopPreview(); }
+function watchPreview(){
+  clearTimeout(part.previewTimer);
+  const audio = $('trackAudio');
+  if (!part.preview) return;
+  const left = part.preview.to - audio.currentTime;
+  if (audio.paused !== false || left <= .02){
+    if (audio.paused === false) audio.pause();
+    stopPreview(); return renderTabView();
+  }
+  part.previewTimer = setTimeout(watchPreview, Math.max(10, Math.min(100, left * 1000)));
+}
+function playPreview(which){
+  const audio = $('trackAudio');
+  if (part.preview && part.preview.which === which){ stopPreview(); audio.pause(); return renderTabView(); }
+  const anchor = part.editing === 'anchor', start = parseStamp($('pStart').value), end = anchor ? null : parseStamp($('pEnd').value);
+  if ((which === 'end' ? end : start) === null) return refusePart(`Indique d’abord ${which === 'end' ? 'la fin' : anchor ? 'le moment' : 'le début'}.`);
+  const from = which === 'end' ? Math.max(start || 0, end - PREVIEW) : anchor ? Math.max(0, start - PREVIEW / 2) : start;
+  const to = which === 'end' ? end : anchor ? start + PREVIEW / 2 : Math.min(end === null ? Infinity : end, start + PREVIEW);
+  stopPreview(); refusePart('');
+  audio.currentTime = from; playTrack();
+  part.preview = { which, to };
+  watchPreview(); renderTabView();
+  if (which === 'start' && part.line !== null) showAnchor({ line:part.line });
 }
 $('partList').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   if (b.dataset.editpart !== undefined) openPart(b.dataset.editpart);
-  else if (b.dataset.part !== undefined) choosePart(b.dataset.part);
-  else openPart();
+  else if (b.dataset.part === undefined) openPart();
+  else if (cueUI.active) pickPart(b.dataset.part);
+  else choosePart(b.dataset.part);
 });
 $('partForm').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
-  if (b.dataset.here) $(b.dataset.here).value = stamp($('trackAudio').currentTime || 0);
+  if (b.dataset.here){
+    $(b.dataset.here).value = stamp($('trackAudio').currentTime || 0);
+    if (b.dataset.here === 'pEnd') part.endAuto = false; else fillEnd();
+    renderTabView();
+  } else if (b.dataset.preview) playPreview(b.dataset.preview);
   else if (b.id === 'pCancel') closePart();
   else if (b.id === 'pDelete') deletePart();
 });
+$('partForm').addEventListener('input', e => {
+  if (e.target.id === 'pEnd') part.endAuto = false;
+  if (e.target.id === 'pStart') fillEnd();
+  renderTabView();
+});
 $('partForm').addEventListener('submit', e => { e.preventDefault(); savePart(); });
 
-/* ---------- repères sur la tablature : elle défile avec le morceau ----------
-   Un repère lie une ligne de la tablature à une partie du MP3 (il suit son début), ou à un instant précis.
-   La ligne est retrouvée par son texte si la tablature est modifiée. */
+/* ---------- synchronisation : la tablature se place là où en est le morceau ----------
+   Une ancre lie une ligne de la tablature au début d'une partie du MP3 (elle le suit), ou à un instant au milieu
+   d'une longue partie. La tablature ne défile pas en continu : elle se place sur une ancre quand on choisit sa partie,
+   ou quand la lecture l'atteint. La ligne est retrouvée par son texte si la tablature change. */
 const cuesKey = id => `guitar-chords:cues:${id}`;
 const cuesCache = {};
-const cueUI = { active:false, source:'' };                    // source : partie à poser ('' = la position actuelle)
-// on : défilement automatique ; hold : pause après un défilement à la main ; cue : repère en cours
-const follow = { on:true, hold:0, frame:null, cue:-1 };
-try { follow.on = localStorage.getItem('guitar-chords:follow') !== '0'; } catch(e){}
+// source : la partie qu'un clic sur la tablature place ; note : pourquoi un clic n'a rien fait
+const cueUI = { active:false, source:'', note:'' };
+const follow = { cue:-1 };                                    // l'ancre en cours
 function tidyCues(list){
   return (Array.isArray(list) ? list : []).map(c => ({ line:c ? Number(c.line) : NaN, text:text(c && c.text).slice(0, 300),
-      time:c ? Number(c.time) || 0 : 0, part:text(c && c.part).replace(/[^\w-]/g, '') }))
+      time:c ? Number(c.time) || 0 : 0, part:text(c && c.part).replace(/[^\w-]/g, ''), within:text(c && c.within).replace(/[^\w-]/g, '') }))
     .filter(c => Number.isInteger(c.line) && c.line >= 0 && c.time >= 0);
 }
 function parseCues(json){ try { return tidyCues(JSON.parse(json)); } catch(e){ return []; } }
@@ -2360,7 +2539,7 @@ function lineOf(lines, cue){
   lines.forEach((line, i) => { if (line === cue.text && (best < 0 || Math.abs(i - cue.line) < Math.abs(best - cue.line))) best = i; });
   return best >= 0 ? best : Math.min(cue.line, lines.length - 1);
 }
-// les repères du morceau, dans l'ordre d'écoute ; k : leur rang dans la liste gardée
+// les ancres du morceau, dans l'ordre d'écoute ; k : leur rang dans la liste gardée
 function placedCues(){
   const lines = tabLines(), parts = partsOf(songId);
   return cuesOf(songId).map((cue, k) => {
@@ -2370,124 +2549,162 @@ function placedCues(){
   }).filter(Boolean).sort((a, b) => a.time - b.time || a.line - b.line);
 }
 const activeCue = (cues, time) => cues.filter(c => c.time <= time + .05).pop() || null;
-// où en est la tablature : un numéro de ligne, qui avance régulièrement d'un repère au suivant
-function tabPosition(cues, time){
-  const from = activeCue(cues, time);
-  if (!from) return null;
-  const next = cues[cues.indexOf(from) + 1];
-  if (!next || next.line <= from.line) return from.line;       // reprise d'un passage plus haut : saut le moment venu
-  return from.line + (next.line - from.line) * Math.min(1, Math.max(0, (time - from.time) / (next.time - from.time)));
+// l'ancre du début d'une partie : la sienne, ou une ancre posée à cet instant-là
+const anchorOfPart = (cues, p) => cues.find(c => c.part === p.id) || cues.find(c => !c.part && Math.abs(c.time - p.start) < .75);
+const partAt = time => partsOf(songId).find(p => time >= p.start - .05 && time < p.end - .05);
+// « 0:14 · Couplet » pour le début d'une partie, « ↳ 0:25 » pour une ancre en cours de partie
+const cueLabel = c => c.name ? `${clock(Math.floor(c.time))} · ${esc(c.name)}` : `${partAt(c.time) ? '↳ ' : ''}${clock(Math.floor(c.time))}`;
+// le nom d'une partie, lu dans la tablature : « [Couplet] », « Refrain : »… sur la ligne cliquée ou juste au-dessus
+const HEADING = /^\s*(?:\[\s*([^\]]{1,40}?)\s*\]|((?:intro|verse|couplet|chorus|refrain|pre-?chorus|pr[ée]-?refrain|bridge|pont|solo|interlude|riff|outro|coda|fin)\b[^|:\[\]]{0,20}?)\s*:?)\s*$/i;
+function headingAt(lines, line){
+  for (let i = line, seen = 0; i >= 0 && seen < 3; i--){
+    if (!lines[i].trim()) continue;
+    const m = lines[i].match(HEADING);
+    if (m) return (m[1] || m[2]).trim();
+    seen++;
+  }
+  return '';
+}
+// les libellés de la saisie, selon qu'on décrit une partie ou une ancre
+function renderPartForm(lines){
+  const anchor = part.editing === 'anchor', chosen = partsOf(songId).find(p => p.id === cueUI.source);
+  const playing = which => part.preview !== null && part.preview.which === which;
+  $('pTitle').textContent = anchor && chosen ? `Ancre dans « ${chosen.name} »` : '';
+  $('pNameBox').hidden = anchor;
+  $('pEndBox').hidden = anchor;
+  $('pStartText').textContent = anchor ? 'Moment' : 'Début';
+  $('pPreviewStart').textContent = playing('start') ? '■ Stop' : anchor ? '▶ Aperçu' : '▶ Aperçu du début';
+  $('pPreviewStart').setAttribute('aria-pressed', playing('start'));
+  $('pPreviewEnd').textContent = playing('end') ? '■ Stop' : '▶ Aperçu de la fin';
+  $('pPreviewEnd').setAttribute('aria-pressed', playing('end'));
+  $('pLine').textContent = !cueUI.active || part.editing === null ? ''
+    : part.line === null ? (anchor ? 'Clique dans la tablature la ligne à afficher à ce moment.' : 'Clique dans la tablature la ligne où la partie commence.')
+    : `Ligne choisie : « ${(lines[part.line] || '').trim().slice(0, 28) || 'ligne vide'} » (clique ailleurs pour changer)`;
 }
 function renderTabView(){
-  const box = $('songText'), cues = placedCues(), loaded = track.url !== null, lined = cueUI.active || cues.length > 0;
-  const now = loaded && !cueUI.active ? activeCue(cues, $('trackAudio').currentTime || 0) : null;
+  const box = $('songText'), syncing = cueUI.active, editing = part.editing !== null, loaded = track.url !== null, lines = tabLines();
+  let cues = placedCues();
+  const lined = syncing || cues.length > 0;
+  const now = loaded && !syncing ? activeCue(cues, $('trackAudio').currentTime || 0) : null;
   follow.cue = now ? now.k : -1;
-  $('cueStart').hidden = cueUI.active || !loaded;
-  $('cueStart').textContent = cues.length ? 'Modifier les repères' : 'Synchroniser avec le morceau';
-  $('followToggle').hidden = cueUI.active || !cues.length;
-  $('followToggle').setAttribute('aria-pressed', follow.on);
-  $('cueBar').hidden = !cueUI.active;
-  if (cueUI.active){
-    $('cueHere').setAttribute('aria-pressed', !cueUI.source);
-    $('cueNow').textContent = clock(Math.floor($('trackAudio').currentTime || 0));
-    $('cueParts').innerHTML = partsOf(songId).map(p => `<button type="button" data-source="${p.id}" aria-pressed="${p.id === cueUI.source}">` +
-      `${esc(p.name)}${cues.some(c => c.part === p.id) ? ' ✓' : ''}</button>`).join('');
+  const written = sheetOf(songId).shown && !!sheetOf(songId).text.trim();
+  $('cueStart').hidden = syncing || editing || !loaded || !written;
+  $('cueStart').textContent = cues.length ? 'Modifier la synchronisation' : 'Synchroniser avec le morceau';
+  $('cueBar').hidden = !syncing || editing;
+  $('songSide').classList.toggle('working', syncing || editing);   // le reste de la colonne s'efface le temps de saisir
+  renderPartForm(lines);
+  const chosen = syncing ? partsOf(songId).find(p => p.id === cueUI.source) : null;
+  const chosenCue = chosen ? cues.find(c => c.part === chosen.id) : null;
+  if (syncing){
+    $('cueHint').textContent = !chosen ? ''
+      : chosenCue ? `« ${chosen.name} » est placée. Clique une autre ligne de la tablature pour la déplacer.`
+      : `Clique dans la tablature la ligne où commence « ${chosen.name} ».`;
+    $('cueNote').textContent = cueUI.note;
+    $('cueAnchor').hidden = !chosen;
   }
-  box.className = lined ? `cued${cueUI.active ? ' cueing' : ''}` : '';
-  $('songSheet').classList.toggle('roomy', follow.on && !cueUI.active && cues.length > 0);
+  // la saisie en cours apparaît déjà sur sa ligne
+  let pending = null;
+  if (syncing && editing && part.line !== null){
+    const start = parseStamp($('pStart').value), at = start === null ? '–' : clock(Math.floor(start));
+    pending = { line:part.line, label:part.editing === 'anchor' ? `↳ ${at}` : `${at} · ${esc($('pName').value.trim() || 'Nouvelle partie')}` };
+    if (part.editing !== 'anchor') cues = cues.filter(c => c.part !== part.editing);
+  }
+  // l'étendue de la partie qu'on place : de sa ligne jusqu'à la partie suivante dans la tablature, sinon jusqu'au bout
+  const first = !syncing ? null : editing && part.editing !== 'anchor' ? part.line : chosenCue ? chosenCue.line : null;
+  const own = editing && part.editing !== 'anchor' ? part.editing : cueUI.source;
+  const after = first === null ? [] : cues.filter(c => c.part && c.part !== own && c.line > first).map(c => c.line);
+  const last = after.length ? Math.min(...after) : lines.length;
+  box.className = lined ? `cued${syncing ? ' cueing' : ''}` : '';
+  $('songSheet').classList.toggle('roomy', cues.length > 0 || syncing);
   if (!lined){ box.textContent = sheetOf(songId).text; return; }     // texte brut : rien de collé n'est interprété
-  box.innerHTML = tabLines().map((line, i) => {
+  const scrolled = box.scrollTop;
+  box.innerHTML = lines.map((line, i) => {
     const chips = cues.filter(c => c.line === i).map(c =>
-      `<button type="button" class="cue${now && now.k === c.k ? ' on' : ''}" data-cue="${c.k}">${clock(Math.floor(c.time))}${c.name ? ` · ${esc(c.name)}` : ''}</button>` +
-      (cueUI.active ? `<button type="button" class="cue-remove" data-uncue="${c.k}" aria-label="Retirer ce repère">×</button>` : '')).join('');
-    return `<span class="tab-line${now && now.line === i ? ' now' : ''}" data-line="${i}"${cueUI.active ? ' tabindex="0"' : ''}>` +
-      `<span class="tab-gutter">${chips}</span><span class="tab-code">${esc(line)}</span></span>`;
+      `<button type="button" class="cue${now && now.k === c.k ? ' on' : ''}" data-cue="${c.k}">${cueLabel(c)}</button>` +
+      (syncing ? `<button type="button" class="cue-remove" data-uncue="${c.k}" aria-label="Retirer cette ancre">×</button>` : '')).join('') +
+      (pending && pending.line === i ? `<span class="cue pending">${pending.label}</span>` : '');
+    const spot = `${now && now.line === i ? ' now' : ''}${first !== null && i >= first && i < last ? ' in-part' : ''}`;
+    return `<span class="tab-line${spot}" data-line="${i}"${syncing ? ' tabindex="0"' : ''}><span class="tab-gutter">${chips}</span><span class="tab-code">${esc(line)}</span></span>`;
   }).join('');
+  box.scrollTop = scrolled;
 }
 function startCueing(){
-  const placed = cuesOf(songId).map(c => c.part), next = partsOf(songId).find(p => !placed.includes(p.id));
-  cueUI.active = true; cueUI.source = next ? next.id : '';
-  renderTabView();
+  Object.assign(cueUI, { active:true, source:part.selected || '', note:'' });
+  part.selected = null; clearTimeout(part.watch);              // « Tout » : l'écoute ne s'arrête pas pendant la saisie
+  renderParts(); renderMarks(); renderTabView();
 }
-function placeCue(line){
-  const lines = tabLines(), source = cueUI.source;
-  if (line < 0 || line >= lines.length) return;
-  const time = source ? 0 : Math.round(($('trackAudio').currentTime || 0) * 10) / 10;
-  // une partie n'a qu'un repère ; un nouvel instant tout proche remplace l'ancien
-  cuesCache[songId] = [...cuesOf(songId).filter(c => source ? c.part !== source : c.part || Math.abs(c.time - time) > .5),
-    { line, text:lines[line], time, part:source }];
-  saveCues(songId);
-  if (source){                                                 // puis la partie suivante à placer
-    const placed = cuesOf(songId).map(c => c.part), next = partsOf(songId).find(p => !placed.includes(p.id));
-    cueUI.source = next ? next.id : '';
+function stopCueing(){ Object.assign(cueUI, { active:false, note:'' }); closePart(); }
+// pendant la synchronisation, une pastille désigne la partie à placer
+function pickPart(id){
+  Object.assign(cueUI, { source:id, note:'' });
+  renderParts(); renderTabView();
+  showAnchor(placedCues().find(c => c.part === id));
+}
+// un clic sur une ligne pendant la synchronisation
+function tapLine(line){
+  const lines = tabLines();
+  if (!(line >= 0 && line < lines.length)) return;
+  // sans partie choisie, le clic en crée une à cet endroit
+  if (part.editing === null && !partsOf(songId).some(p => p.id === cueUI.source)) openPart();
+  if (part.editing !== null){
+    part.line = line; refusePart('');
+    if (part.editing === 'new' && $('pName').value === part.autoName){       // nom pas encore saisi : lu dans la tablature
+      part.autoName = headingAt(lines, line).slice(0, 40); $('pName').value = part.autoName;
+    }
+    return renderTabView();
   }
-  renderTabView();
+  cueUI.note = '';
+  setPartCue(cueUI.source, line);
+  renderParts(); renderTabView();
 }
-// un repère cliqué : on écoute à partir de là
+// une ancre cliquée : on écoute à partir de là
 function playCue(k){
   const cue = placedCues().find(c => c.k === k);
   if (!cue || track.url === null) return;
-  part.selected = cue.part || null; follow.hold = 0;
+  part.selected = cue.part || null;
   renderParts(); renderMarks();
   $('trackAudio').currentTime = cue.time;
+  renderTabView(); showAnchor(cue);
   playTrack(); watchPart();
 }
-// fait défiler la page jusqu'à l'endroit joué ; jump : d'un coup, sinon en douceur, image après image
-function followStep(jump){
-  if (view !== 'songs' || draft || cueUI.active || !follow.on || !sheetOf(songId).shown || Date.now() < follow.hold) return;
-  const position = tabPosition(placedCues(), $('trackAudio').currentTime || 0);
-  if (position === null || !window.scrollTo) return;
-  const index = Math.floor(position), row = $('songText').querySelector(`[data-line="${index}"]`);
+// place la tablature sur une ancre, une seule fois : sa ligne en haut de la zone qui défile (la page, sur petit écran)
+function showAnchor(cue){
+  if (!cue || view !== 'songs' || draft || !sheetOf(songId).shown) return;
+  const box = $('songText'), row = box.querySelector(`[data-line="${cue.line}"]`);
   if (!row) return;
-  const box = row.getBoundingClientRect(), here = window.scrollY;
-  const goal = Math.max(0, here + box.top + (position - index) * box.height - window.innerHeight * .3);
-  if (jump) return window.scrollTo({ top:goal, behavior:'smooth' });
-  const gap = goal - here;
-  if (Math.abs(gap) >= 1) window.scrollTo(0, here + Math.sign(gap) * Math.max(1, Math.abs(gap) * .12));
+  if (box.scrollHeight > box.clientHeight + 1)
+    box.scrollTo({ top:Math.max(0, box.scrollTop + row.getBoundingClientRect().top - box.getBoundingClientRect().top - 4), behavior:'smooth' });
+  else if (row.scrollIntoView) row.scrollIntoView({ block:'nearest', behavior:'smooth' });
 }
+// pendant la lecture : on ne bouge qu'en atteignant une autre ancre (jamais pendant une saisie)
 function markCue(){
-  if (cueUI.active){ $('cueNow').textContent = clock(Math.floor($('trackAudio').currentTime || 0)); return; }
-  if (!cuesOf(songId).length) return;
+  if (cueUI.active || part.editing !== null || !cuesOf(songId).length) return;
   const now = activeCue(placedCues(), $('trackAudio').currentTime || 0);
-  if ((now ? now.k : -1) !== follow.cue) renderTabView();
+  if ((now ? now.k : -1) === follow.cue) return;
+  renderTabView(); showAnchor(now);
 }
-function followLoop(){
-  follow.frame = null;
-  if ($('trackAudio').paused !== false || !cuesOf(songId).length) return;
-  markCue(); followStep(false);
-  follow.frame = requestAnimationFrame(followLoop);
-}
-function startFollowing(){ if (follow.frame === null) follow.frame = requestAnimationFrame(followLoop); }
-$('trackAudio').addEventListener('play', startFollowing);
 $('trackAudio').addEventListener('timeupdate', markCue);
-$('trackAudio').addEventListener('seeked', () => { markCue(); if ($('trackAudio').paused !== false) followStep(true); });
+$('trackAudio').addEventListener('seeked', markCue);
 $('cueStart').addEventListener('click', startCueing);
-$('cueDone').addEventListener('click', () => { cueUI.active = false; renderTabView(); });
+$('cueDone').addEventListener('click', stopCueing);
+$('cueAnchor').addEventListener('click', openAnchor);
 $('cueClear').addEventListener('click', () => {
-  if (!cuesOf(songId).length || !ask('Effacer tous les repères de cette tablature ?')) return;
-  cuesCache[songId] = []; saveCues(songId); renderTabView();
-});
-$('cueSources').addEventListener('click', e => {
-  const b = e.target.closest('button[data-source]'); if (!b) return;
-  cueUI.source = b.dataset.source; renderTabView();
+  if (!cuesOf(songId).length || !ask('Effacer toutes les ancres de cette tablature ?')) return;
+  cuesCache[songId] = []; saveCues(songId); renderParts(); renderTabView();
 });
 $('songText').addEventListener('click', e => {
   const b = e.target.closest('[data-uncue],[data-cue],[data-line]'); if (!b) return;
   if (b.dataset.uncue !== undefined){
-    cuesCache[songId] = cuesOf(songId).filter((c, k) => k !== Number(b.dataset.uncue)); saveCues(songId); renderTabView();
-  } else if (b.dataset.cue !== undefined){ if (!cueUI.active) playCue(Number(b.dataset.cue)); }
-  else if (cueUI.active) placeCue(Number(b.dataset.line));
+    cuesCache[songId] = cuesOf(songId).filter((c, k) => k !== Number(b.dataset.uncue)); saveCues(songId); renderParts(); renderTabView();
+  } else if (b.dataset.cue !== undefined){
+    const cue = placedCues().find(c => c.k === Number(b.dataset.cue));
+    if (!cueUI.active) playCue(Number(b.dataset.cue));
+    else if (cue && cue.part && part.editing === null) pickPart(cue.part);
+  } else if (cueUI.active) tapLine(Number(b.dataset.line));
 });
 $('songText').addEventListener('keydown', e => {
-  if (cueUI.active && e.key === 'Enter' && e.target.dataset.line !== undefined){ e.preventDefault(); placeCue(Number(e.target.dataset.line)); }
+  if (cueUI.active && e.key === 'Enter' && e.target.dataset.line !== undefined){ e.preventDefault(); tapLine(Number(e.target.dataset.line)); }
 });
-$('followToggle').addEventListener('click', () => {
-  follow.on = !follow.on; follow.hold = 0;
-  try { localStorage.setItem('guitar-chords:follow', follow.on ? '1' : '0'); } catch(e){}
-  renderTabView(); followStep(true);
-});
-// un défilement à la main suspend le suivi quelques secondes
-['wheel', 'touchmove', 'keydown'].forEach(type => addEventListener(type, () => { follow.hold = Date.now() + 4000; }, { passive:true }));
 
 // draft : le morceau en cours de saisie (null hors du formulaire) ; dirty : il a été touché
 let draft = null, dirty = false;
@@ -2543,6 +2760,9 @@ function renderStrumEdit(){
 }
 function openForm(song){
   stopStrum(); pauseTrack();
+  if (cueUI.active || part.editing !== null) resetParts();   // la synchronisation en cours s'arrête là
+  if (allSongs().some(s => s.id === song.id)) songId = song.id;   // « Retour » montrera ce morceau
+  $('fSaved').textContent = '';
   draft = JSON.parse(JSON.stringify(song)); dirty = false;
   draft.tab = sheetOf(draft.id).text;
   draft.chords.forEach(c => {
@@ -2558,7 +2778,6 @@ function openForm(song){
   renderSongs();
   $('fTitle').focus();
 }
-function closeForm(){ draft = null; dirty = false; renderSongs(); }
 // quitte le formulaire, en demandant avant de perdre une saisie
 function leaveForm(){
   if (draft && dirty && !ask('Abandonner les modifications ?')) return false;
@@ -2578,36 +2797,47 @@ function saveSong(){
   const kept = saveLibrary();
   // la tablature saisie ici s'affiche directement sur le fond
   sheets[song.id] = { text:tab, shown:!!tab.trim() }; saveTab(song.id, tab); saveShown(song.id, !!tab.trim());
-  songId = song.id; closeForm();
-  if (!kept){ track.note = 'Ce navigateur ne peut pas garder les morceaux.'; renderTrack(); }
+  openForm(allSongs().find(s => s.id === song.id));          // on reste dans l'édition
+  $('fSaved').textContent = kept ? 'Enregistré.' : 'Ce navigateur ne peut pas garder les morceaux.';
 }
 function deleteSong(){
   const id = draft.id;
   if (isBuiltIn(id)){
     if (!ask('Rétablir le morceau d’origine ? Tes modifications seront perdues.')) return;
-    delete library.edited[id]; saveLibrary(); return closeForm();
+    delete library.edited[id]; saveLibrary(); return openForm(allSongs().find(s => s.id === id));
   }
   if (!ask('Supprimer ce morceau, avec sa tablature et son MP3 ?')) return;
   library.added = library.added.filter(s => s.id !== id); saveLibrary();
   try { localStorage.removeItem(tabKey(id)); localStorage.removeItem(shownKey(id)); localStorage.removeItem(partsKey(id)); localStorage.removeItem(cuesKey(id)); } catch(e){}
   delete sheets[id]; delete tracks[id]; delete partsCache[id]; delete cuesCache[id];
   trackStore('readwrite', store => store.delete(id)).catch(() => {});
-  songId = SONGS[0].id; closeForm();
+  songId = SONGS[0].id; openForm(currentSong());
 }
 
+// l'édition remplace toute la page : ni titre, ni onglets, ni le reste du morceau
+function renderEditMode(){
+  const editing = draft !== null && view === 'songs';
+  $('topbar').hidden = editing;
+  $('viewSongs').hidden = view !== 'songs' || editing;
+  $('editView').hidden = !editing;
+}
+function renderEditList(){
+  const list = allSongs(), fresh = !list.some(s => s.id === draft.id);
+  const item = (id, title, detail) => `<button type="button" data-editsong="${id}" aria-current="${id === draft.id}">` +
+    `<b>${esc(title || 'Sans titre')}</b><span>${esc(detail)}</span></button>`;
+  $('editList').innerHTML = (fresh ? item(draft.id, draft.title || 'Nouvelle chanson', 'Pas encore enregistrée') : '') +
+    list.map(s => item(s.id, s.title, s.artist)).join('');
+}
 function renderSongs(){
-  const song = currentSong(), editing = draft !== null;
-  songId = song.id;
-  const shownId = editing ? draft.id : song.id;
-  $('songList').innerHTML = allSongs().map(s =>
-      `<span class="song-item"><button type="button" data-song="${s.id}" aria-pressed="${s.id === shownId}">` +
-      `${esc(s.artist ? `${s.title} · ${s.artist}` : s.title)}</button>` +
-      (editing ? '' : `<button type="button" class="song-edit" data-edit="${s.id}">Modifier la chanson</button>`) + '</span>').join('') +
-    '<button type="button" class="add" data-add aria-label="Ajouter une chanson" title="Ajouter une chanson">+</button>';
-  $('songChords').hidden = $('songGrid').hidden = editing;
-  $('backup').hidden = editing;
+  const editing = draft !== null;
+  renderEditMode();
   $('songForm').hidden = !editing;
-  if (editing) return $('page').classList.toggle('flow', view === 'songs');   // formulaire long : la page défile
+  if (editing) return renderEditList();
+  const song = currentSong();
+  songId = song.id;
+  $('songList').innerHTML = '<button type="button" class="add" data-add aria-label="Ajouter une chanson" title="Ajouter une chanson">+</button>' +
+    allSongs().map(s => `<span class="song-item"><button type="button" data-song="${s.id}" aria-pressed="${s.id === song.id}">` +
+      `${esc(s.artist ? `${s.title} · ${s.artist}` : s.title)}</button></span>`).join('');
   $('songChords').innerHTML = song.chords.map(songDiagram).join('');
   const columns = Math.min(8, Math.max(7, song.chords.length));
   if ($('songChords').style.setProperty) $('songChords').style.setProperty('--n', columns);
@@ -2623,20 +2853,25 @@ function renderSongs(){
 }
 $('songList').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
-  if (b.hasAttribute('data-add')){
-    if (leaveForm()) openForm(blankSong());
-    return;
-  }
-  const edit = b.dataset.edit, id = edit || b.dataset.song;
-  if (!id || (draft && draft.id === id) || !leaveForm()) return;
-  stopStrum(); songId = id;
-  if (edit) openForm(currentSong()); else renderSongs();
+  if (b.hasAttribute('data-add')) return openForm(blankSong());
+  const id = b.dataset.song;
+  if (!id) return;
+  stopStrum(); songId = id; renderSongs();
+});
+$('editSongs').addEventListener('click', () => openForm(currentSong()));
+$('editBack').addEventListener('click', () => { if (leaveForm()) renderSongs(); });
+$('editNew').addEventListener('click', () => { if (leaveForm()) openForm(blankSong()); });
+$('editList').addEventListener('click', e => {
+  const b = e.target.closest('button[data-editsong]'); if (!b || !draft) return;
+  const song = allSongs().find(s => s.id === b.dataset.editsong);
+  if (song && song.id !== draft.id && leaveForm()) openForm(song);
 });
 $('songForm').addEventListener('input', e => {
   const field = FIELDS[e.target.id], row = e.target.dataset.row;
   if (field) draft[field] = e.target.value;
   else if (row !== undefined) draft.chords[row][e.target.dataset.key] = e.target.value;
-  dirty = true;
+  dirty = true; $('fSaved').textContent = '';
+  if (field === 'title' || field === 'artist') renderEditList();
 });
 $('songForm').addEventListener('change', e => {
   const { pick, level } = e.target.dataset;
@@ -2651,7 +2886,8 @@ $('songForm').addEventListener('change', e => {
 });
 $('songForm').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b || b.type === 'submit') return;
-  if (b.id === 'fCancel') return closeForm();
+  // « Annuler » revient à la version enregistrée (ou au morceau précédent, pour une chanson pas encore créée)
+  if (b.id === 'fCancel') return openForm(allSongs().find(s => s.id === draft.id) || currentSong());
   if (b.id === 'fDelete') return deleteSong();
   const { remove, slot, length } = b.dataset;
   if (b.id === 'fAddChord') draft.chords.push(emptyChord());
@@ -2683,6 +2919,7 @@ function setHash(h){
 
 function setView(v){
   view = v;
+  $('editView').hidden = true; $('topbar').hidden = false;
   $('viewChords').hidden = v !== 'chords';
   $('viewFret').hidden = v !== 'fretboard';
   $('viewScales').hidden = v !== 'scales';
@@ -2710,7 +2947,13 @@ loadSamples();
    Les données restent dans le navigateur, pour une adresse donnée : un autre fichier, ou le site en ligne, ne les voit pas.
    « Télécharger avec mes chansons » fabrique une copie du site qui les emporte ; « Importer » les reprend d'une copie. */
 const DATA_OPEN = '<script type="application/json" id="' + 'userData">';
-const backupNote = message => { $('backupNote').textContent = message; };
+let noteTimer = null;
+// message sous les icônes, qui s'efface de lui-même (ou d'un clic)
+function backupNote(message){
+  clearTimeout(noteTimer);
+  $('backupNote').textContent = message;
+  if (message) noteTimer = setTimeout(() => backupNote(''), 9000);
+}
 // ce que l'utilisateur a ajouté ou réglé, tel qu'il est affiché (même si le navigateur refuse de le garder)
 function localData(){
   const out = {};
@@ -2824,6 +3067,7 @@ async function importBackup(file){
   try { data = readBackup(await file.text()); } catch(e){}
   if (!data) return backupNote('Ce fichier ne contient pas de sauvegarde de Guitar chords.');
   if (!ask(`Importer cette sauvegarde (${summary(data)}) ? Elle remplace ce qui existe ici pour les mêmes morceaux.`)) return;
+  if (draft && !leaveForm()) return;                         // une saisie en cours : on demande avant de la quitter
   applyData(data, true);
   const kept = await applyTracks(data.tracks, true);
   renderSongs();
@@ -2839,6 +3083,7 @@ function restoreSaved(){
   applyTracks(data.tracks, false).then(kept => { if (kept) localStorage.setItem(mark, String(data.stamp)); }).catch(() => {});
 }
 $('backupSave').addEventListener('click', downloadBackup);
+$('backupNote').addEventListener('click', () => backupNote(''));
 $('backupLoad').addEventListener('click', () => $('backupFile').click());
 $('backupFile').addEventListener('change', e => {
   const file = e.target.files[0];
