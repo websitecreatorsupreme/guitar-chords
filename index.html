@@ -260,21 +260,62 @@
   .song-main{display:flex; flex-direction:column; min-height:0}
   /* strumming pattern, discret : un petit bouton pour l'écouter, puis les coups et leur compte */
   .strum-row{display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; margin-bottom:8px}
-  .strum-shift{display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; margin-bottom:22px; font-size:.8rem; color:var(--muted)}
+  .strum-shift{display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; margin-bottom:14px; font-size:.8rem; color:var(--muted)}
   .strum-shift button[data-shift]{font:inherit; padding:2px 10px; border:0; border-radius:999px; background:var(--chip); color:var(--ink); cursor:pointer}
   .strum-shift button[data-shift]:hover{background:var(--chip-hover)}
   .strum-shift output{min-width:52px; text-align:center; color:var(--ink); font-variant-numeric:tabular-nums}
   .modes.strum-actions,.modes.track-actions{margin:0}
   .modes.strum-actions button,.modes.track-actions button{min-width:78px; padding:3px 12px; font-size:.85rem}
   /* le MP3 du morceau : au-dessus de la rythmique, aussi discret qu'elle */
-  .track{margin-bottom:22px}
+  .track{margin-bottom:14px}
   .track-head{display:flex; flex-wrap:wrap; align-items:center; gap:4px 14px; margin-bottom:6px}
   .track-head .label{margin:0}
   .track-head .reset{margin-right:10px}
-  .track-name{margin:0 0 6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.85rem}
-  .track-row{display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px}
-  .track-row input{flex:1; min-width:90px; margin:0; accent-color:var(--accent); cursor:pointer}
-  .track-row span{white-space:nowrap; font-size:.8rem; color:var(--muted); font-variant-numeric:tabular-nums}
+  .track-name{margin:0 0 4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.85rem}
+  /* lecteur : Play, Replay et la barre ont la même hauteur ; la barre est épaisse, facile à saisir */
+  .track-row{--player-h:36px; display:flex; align-items:center; gap:8px}
+  .modes.track-actions{flex-wrap:nowrap; align-items:center; gap:6px}
+  .track-row .modes.track-actions button{height:var(--player-h)}
+  .replay-box{position:relative; display:flex}
+  .track-row .modes.track-actions button.replay{width:var(--player-h); min-width:0; padding:0}
+  .track-row .modes.track-actions button.replay svg{width:17px; height:17px; margin:0; vertical-align:-3px}
+  .track-row .modes.track-actions button.replay[aria-pressed="true"]{background:var(--ink); color:var(--bg); border-color:var(--ink)}
+  .replay-tip{display:none; position:absolute; z-index:6; bottom:calc(100% + 6px); left:50%; transform:translateX(-50%); white-space:nowrap; padding:5px 10px; border-radius:8px; background:#5f5b57; color:#fff; font-size:.75rem; pointer-events:none; box-shadow:0 4px 12px rgba(0,0,0,.14)}
+  .replay-box:hover .replay-tip,.replay-box:has(:focus-visible) .replay-tip{display:block}
+  .track-bar{position:relative; flex:1; min-width:90px; height:var(--player-h)}
+  .track-row input[type="range"]{--p:0; -webkit-appearance:none; appearance:none; display:block; width:100%; height:var(--player-h); margin:0; border:0; border-radius:12px; cursor:pointer;
+    background:linear-gradient(to right,var(--root-bg) calc(3px + (100% - 6px) * var(--p)),var(--chip) calc(3px + (100% - 6px) * var(--p)))}
+  .track-row input[type="range"]::-webkit-slider-runnable-track{height:var(--player-h); background:transparent}
+  .track-row input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none; appearance:none; width:6px; height:var(--player-h); border:0; border-radius:3px; background:var(--accent)}
+  .track-row input[type="range"]::-moz-range-track{background:transparent}
+  .track-row input[type="range"]::-moz-range-thumb{width:6px; height:var(--player-h); border:0; border-radius:3px; background:var(--accent)}
+  .track-row input[type="range"]:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
+  /* dans la barre : un trait par partie (blanc pour celle qu'on joue), et le temps à droite */
+  .track-marks{position:absolute; left:3px; right:3px; bottom:3px; height:4px; pointer-events:none}
+  .track-marks i{position:absolute; top:0; bottom:0; border-radius:2px; background:var(--muted); opacity:.6; box-shadow:-1px 0 var(--chip),1px 0 var(--chip)}
+  .track-marks i.on{background:var(--ink); opacity:1; z-index:1}
+  /* les parties : « Tout », puis une pastille par partie ; « Modifier » apparaît au survol */
+  .parts{display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:10px}
+  .parts button,.part-time button{font:inherit; font-size:.8rem; font-weight:600; padding:3px 11px; border:2px solid transparent; border-radius:999px; background:var(--chip); color:var(--ink); cursor:pointer}
+  .parts button:hover,.part-time button:hover{background:var(--chip-hover)}
+  .parts button[aria-pressed="true"]{background:var(--ink); color:var(--bg); border-color:var(--ink)}   /* comme la notation */
+  .parts button.add{width:28px; height:28px; padding:0; font-size:1.05rem; line-height:1}
+  .part-item{position:relative; max-width:100%}
+  .part-item>button:first-child{max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .parts .part-item button.part-edit{display:none; position:absolute; z-index:5; top:100%; left:50%; transform:translateX(-50%); padding:5px 10px; border:0; border-radius:8px; background:#5f5b57; color:#fff; font-size:.75rem; white-space:nowrap; box-shadow:0 4px 12px rgba(0,0,0,.14)}
+  .parts .part-item:hover button.part-edit,.parts .part-item:has(:focus-visible) button.part-edit{display:block}
+  .part-form{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px 14px; margin-top:12px; font-size:.78rem; color:var(--muted)}
+  .part-form label{display:flex; flex-direction:column; gap:3px; min-width:0}
+  .part-form .part-name,.part-form p,.part-form .modes{grid-column:1/-1}
+  .part-time{display:flex; align-items:flex-end; gap:6px; min-width:0}
+  .part-time label{flex:1}
+  .part-time button{flex:none; margin-bottom:2px}
+  .part-form input{width:100%; min-width:0; font:inherit; font-size:.9rem; padding:5px 11px; border:0; border-radius:999px; background:var(--chip); color:var(--ink)}
+  .part-form input:focus-visible{outline:3px solid var(--accent); outline-offset:1px}
+  .part-form p{margin:0; color:var(--ink)}
+  .part-form p:empty{display:none}
+  .modes.track-actions.part-actions{align-items:center; gap:8px}
+  #trackTime{position:absolute; top:50%; right:8px; transform:translateY(-50%); padding:1px 6px; border-radius:6px; background:var(--bg); white-space:nowrap; pointer-events:none; font-size:.74rem; color:var(--ink); font-variant-numeric:tabular-nums; opacity:.85}
   .track-note{margin:4px 0 0; font-size:.8rem; color:var(--muted)}
   .track-note:empty{display:none}
   .strum{display:flex; margin:0; padding:0; list-style:none; text-align:center}
@@ -284,8 +325,29 @@
   .strum li.on{background:var(--root-bg); color:var(--root-ink)}   /* coup en cours */
   .strum li.on span{color:var(--root-ink)}
   .song-meta{margin:0 0 8px; font-size:.85rem; color:var(--muted)}
+  .song-meta:last-child{margin-bottom:0}
   .song-meta a{margin-right:16px; color:var(--muted); text-underline-offset:2px; white-space:nowrap}
   .song-meta a:hover{color:var(--ink)}
+  /* Play garde la même largeur quand il devient « Pause » ou « Stop » */
+  .modes.track-actions button#trackPlay,.modes.strum-actions button#strumPlay{width:100px; min-width:0; padding-left:0; padding-right:0}
+  /* de l'air entre les groupes de la colonne : morceau, rythmique, repères (resserrés sur un écran bas) */
+  .song-side{--cluster:38px}
+  .track{margin-bottom:var(--cluster)}
+  .track-head{margin-bottom:10px}
+  .track-name{margin-bottom:12px}
+  .parts{margin-top:14px; gap:8px}
+  .song-side>.label{margin-bottom:12px}
+  .strum-row{margin-bottom:14px}
+  .strum-shift{margin-bottom:var(--cluster)}
+  .song-meta{margin-bottom:12px}
+  .song-meta:last-child{margin-bottom:0}
+  @media (min-width:700px) and (max-height:740px){
+    .song-side{--cluster:15px}
+    .track-head,.track-name,.song-side>.label{margin-bottom:4px}
+    .parts{margin-top:6px; gap:6px}
+    .strum-row{margin-bottom:6px}
+    .song-meta{margin-bottom:4px; line-height:1.35}
+  }
   .song-chords .unknown{margin:0; padding:14px 2px 18px; color:#7a6e61; font-size:2rem; font-weight:700; line-height:1.1}
   .song-chords .unknown small{display:block; font-size:.72rem; font-weight:600}
   /* barre des morceaux : un « + » pour en ajouter un, et « Modifier » pour celui affiché */
@@ -554,10 +616,31 @@
           <div id="trackBox" hidden>
             <p class="track-name" id="trackName"></p>
             <div class="track-row">
-              <div class="modes track-actions"><button type="button" class="play" id="trackPlay" aria-pressed="false">Play</button></div>
-              <input type="range" id="trackSeek" min="0" max="0" step="0.1" value="0" aria-label="Position dans le morceau">
-              <span id="trackTime"></span>
+              <div class="modes track-actions">
+                <button type="button" class="play" id="trackPlay" aria-pressed="false">Play</button>
+                <span class="replay-box">
+                  <button type="button" class="replay" id="trackReplay" aria-pressed="false" aria-describedby="replayTip">Rejouer</button>
+                  <span class="replay-tip" id="replayTip" role="tooltip"></span>
+                </span>
+              </div>
+              <div class="track-bar">
+                <input type="range" id="trackSeek" min="0" max="0" step="0.1" value="0" aria-label="Position dans le morceau">
+                <div class="track-marks" id="partMarks" aria-hidden="true"></div>
+                <span id="trackTime"></span>
+              </div>
             </div>
+            <div class="parts" id="partList" role="group" aria-label="Parties du morceau"></div>
+            <form class="part-form" id="partForm" novalidate hidden>
+              <label class="part-name">Nom de la partie<input type="text" id="pName" maxlength="40" placeholder="Intro, couplet, refrain…" autocomplete="off"></label>
+              <div class="part-time"><label>Début<input type="text" id="pStart" inputmode="decimal" placeholder="0:00" autocomplete="off"></label><button type="button" data-here="pStart" aria-label="Début : position actuelle">Ici</button></div>
+              <div class="part-time"><label>Fin<input type="text" id="pEnd" inputmode="decimal" placeholder="0:00" autocomplete="off"></label><button type="button" data-here="pEnd" aria-label="Fin : position actuelle">Ici</button></div>
+              <p id="partNote" role="alert"></p>
+              <div class="modes track-actions part-actions">
+                <button type="submit" class="play">Enregistrer</button>
+                <button type="button" class="ghost" id="pCancel">Annuler</button>
+                <button type="button" class="reset" id="pDelete">Supprimer</button>
+              </div>
+            </form>
           </div>
           <p class="track-note" id="trackNote" role="status"></p>
           <audio id="trackAudio" preload="metadata"></audio>
@@ -1418,7 +1501,9 @@ const player = { step:-1, timer:null, speed:800 };
 const ICONS = {
   play:  '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z"/></svg>',
   pause: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 2.5h3.2v11H3.5zM9.3 2.5h3.2v11H9.3z"/></svg>',
-  stop:  '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="3" width="10" height="10" rx="1.5"/></svg>'
+  stop:  '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="3" width="10" height="10" rx="1.5"/></svg>',
+  replay:'<svg class="line" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 4v6h6M3.5 15a9 9 0 1 0 2.1-9.4L1 10"/></svg>',
+  loop:  '<svg class="line" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2l4 4-4 4M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4M21 13v1a4 4 0 0 1-4 4H3"/></svg>'
 };
 
 /* ---------- position à jouer ---------- */
@@ -1970,8 +2055,11 @@ function renderTrack(){
   const length = Number.isFinite(audio.duration) ? audio.duration : 0, now = loaded ? audio.currentTime || 0 : 0;
   $('trackSeek').max = length;
   $('trackSeek').value = now;
+  const seek = $('trackSeek').style;                         // la partie déjà écoutée se colore
+  if (seek && seek.setProperty) seek.setProperty('--p', length ? (now / length).toFixed(4) : 0);
   $('trackTime').textContent = `${clock(Math.floor(now))} / ${clock(Math.floor(length))}`;
   $('trackNote').textContent = track.note;
+  renderMarks();
 }
 function pauseTrack(){ const audio = $('trackAudio'); if (audio.paused === false) audio.pause(); }
 // met un fichier (ou rien) dans le lecteur
@@ -1982,6 +2070,7 @@ function setTrack(record){
   track.url = record ? URL.createObjectURL(record.blob) : null;
   track.name = record ? record.name : '';
   if (record) audio.src = track.url; else if (audio.removeAttribute){ audio.removeAttribute('src'); audio.load(); }
+  resetParts();
   renderTrack();
 }
 async function showTrack(id){
@@ -2023,14 +2112,180 @@ $('trackFile').addEventListener('change', e => {
 });
 $('trackPlay').addEventListener('click', () => {
   const audio = $('trackAudio');
-  if (audio.paused){
-    stopStrum();                                             // un seul son à la fois
-    audio.play().catch(() => { track.note = 'Lecture impossible : le fichier semble abîmé.'; renderTrack(); });
-  } else audio.pause();
+  if (!audio.paused) return audio.pause();
+  const chosen = selectedPart();                             // une partie choisie se rejoue depuis son début
+  if (chosen && !within(chosen, audio.currentTime)) audio.currentTime = chosen.start;
+  playTrack();
 });
-$('trackSeek').addEventListener('input', e => { $('trackAudio').currentTime = Number(e.target.value); renderTrack(); });
+function playTrack(){
+  stopStrum();                                               // un seul son à la fois
+  const started = $('trackAudio').play();
+  if (started && started.catch) started.catch(() => { track.note = 'Lecture impossible : le fichier semble abîmé.'; renderTrack(); });
+}
+$('trackSeek').addEventListener('input', e => {
+  const audio = $('trackAudio'), time = Number(e.target.value), chosen = selectedPart();
+  audio.currentTime = time;
+  if (chosen && !within(chosen, time)){ part.selected = null; renderParts(); }   // sorti de la partie : tout le morceau
+  renderTrack();
+});
 ['play','pause','ended','timeupdate','loadedmetadata','durationchange'].forEach(type =>
   $('trackAudio').addEventListener(type, renderTrack));
+['play','timeupdate'].forEach(type => $('trackAudio').addEventListener(type, watchPart));
+$('trackAudio').addEventListener('ended', () => {            // une partie qui va jusqu'au bout du morceau
+  const chosen = selectedPart(); if (!chosen) return;
+  $('trackAudio').currentTime = chosen.start;
+  if (part.loop){ playTrack(); watchPart(); }
+  renderTrack();
+});
+$('trackReplay').addEventListener('click', pressReplay);
+
+/* ---------- les parties du MP3 : des passages nommés, qu'on peut jouer seuls ---------- */
+const partsKey = id => `guitar-chords:parts:${id}`;
+const partsCache = {};
+// selected : la partie jouée (null = tout le morceau) ; editing : celle en cours de saisie ('new' pour une nouvelle)
+// loop : ce qui est joué (la partie, ou tout le morceau) recommence sans fin ; replayAt : dernier clic sur Replay
+const part = { selected:null, editing:null, watch:null, loop:false, replayAt:0 };
+const DOUBLE_CLICK = 500;                                    // deux clics à moins d'une demi-seconde
+function tidyParts(list){
+  return (Array.isArray(list) ? list : []).map(p => ({ id:text(p && p.id).replace(/[^\w-]/g, ''), name:text(p && p.name).slice(0, 40),
+      start:Number(p && p.start), end:Number(p && p.end) }))
+    .filter(p => p.id && p.start >= 0 && p.end > p.start && Number.isFinite(p.end))
+    .sort((a, b) => a.start - b.start || a.end - b.end);
+}
+function parseParts(json){ try { return tidyParts(JSON.parse(json)); } catch(e){ return []; } }
+function readParts(id){ try { return parseParts(localStorage.getItem(partsKey(id))); } catch(e){ return []; } }
+const partsOf = id => partsCache[id] || (partsCache[id] = readParts(id));
+function saveParts(id){
+  try {
+    if (partsOf(id).length) localStorage.setItem(partsKey(id), JSON.stringify(partsOf(id))); else localStorage.removeItem(partsKey(id));
+    return true;
+  } catch(e){ return false; }
+}
+// « 1:05,5 » ; la saisie accepte aussi « 1:05 » ou des secondes seules
+function stamp(seconds){
+  const t = Math.round(seconds * 10) / 10, minutes = Math.floor(t / 60);
+  return `${minutes}:${(t - minutes * 60).toFixed(1).padStart(4, '0').replace('.', ',')}`;
+}
+function parseStamp(value){
+  const m = value.trim().replace(',', '.').match(/^(?:(\d{1,3}):)?(\d+(?:\.\d+)?)$/);
+  if (!m || (m[1] !== undefined && Number(m[2]) >= 60)) return null;
+  return Number(m[1] || 0) * 60 + Number(m[2]);
+}
+const selectedPart = () => partsOf(songId).find(p => p.id === part.selected) || null;
+const within = (p, time) => time >= p.start - .05 && time < p.end - .05;
+// arrête la lecture à la fin de la partie choisie, et revient à son début
+function watchPart(){
+  clearTimeout(part.watch);
+  const audio = $('trackAudio'), chosen = selectedPart();
+  if (!chosen || audio.paused !== false) return;
+  const left = chosen.end - audio.currentTime;
+  if (left <= .02){
+    audio.currentTime = chosen.start;                        // en boucle, elle repart aussitôt
+    if (!part.loop){ audio.pause(); return renderTrack(); }
+  }
+  part.watch = setTimeout(watchPart, left <= .02 ? 50 : Math.max(10, Math.min(100, left * 1000)));
+}
+function renderReplay(){
+  const button = $('trackReplay'), tip = part.loop ? 'En boucle · clic pour arrêter' : 'Rejouer · double-clic : en boucle';
+  button.innerHTML = part.loop ? ICONS.loop : ICONS.replay;
+  button.setAttribute('aria-pressed', part.loop);
+  button.setAttribute('aria-label', part.loop ? 'Arrêter la boucle' : 'Rejouer');
+  $('replayTip').textContent = tip;
+  $('trackAudio').loop = part.loop && !selectedPart();       // tout le morceau : le lecteur boucle de lui-même
+}
+function setLoop(on){ part.loop = on; renderReplay(); watchPart(); }
+// depuis le début de la partie choisie, ou du morceau
+function replayTrack(){
+  const chosen = selectedPart();
+  $('trackAudio').currentTime = chosen ? chosen.start : 0;
+  playTrack(); watchPart(); renderTrack();
+}
+// un clic : rejouer ; un second aussitôt : en boucle ; un clic pendant la boucle : l'arrêter
+function pressReplay(){
+  const now = Date.now(), again = now - part.replayAt < DOUBLE_CLICK;
+  part.replayAt = again ? 0 : now;
+  if (again) setLoop(true);
+  else if (part.loop) setLoop(false);
+  else replayTrack();
+}
+// « Tout » : tout le morceau ; une partie : elle se joue seule ; un clic sur celle qui joue la met en pause
+function choosePart(id){
+  const audio = $('trackAudio'), chosen = partsOf(songId).find(p => p.id === id);
+  if (chosen && part.selected === chosen.id && audio.paused === false) return audio.pause();
+  part.selected = chosen ? chosen.id : null;
+  renderParts(); renderMarks();
+  if (!chosen) return clearTimeout(part.watch);
+  audio.currentTime = chosen.start;
+  playTrack(); watchPart();
+}
+function renderMarks(){
+  const length = $('trackAudio').duration;
+  $('partMarks').innerHTML = track.url !== null && Number.isFinite(length) && length > 0
+    ? partsOf(songId).filter(p => p.start < length).map(p => `<i${p.id === part.selected ? ' class="on"' : ''} style="left:${(100 * p.start / length).toFixed(2)}%;` +
+        `width:${(100 * (Math.min(p.end, length) - p.start) / length).toFixed(2)}%"></i>`).join('')
+    : '';
+}
+function renderParts(){
+  const list = partsOf(songId), editing = part.editing !== null;
+  $('partList').hidden = editing;
+  $('partForm').hidden = !editing;
+  $('partList').innerHTML = !list.length ? '<button type="button" data-addpart>+ Marquer une partie</button>'
+    : `<button type="button" data-part="" aria-pressed="${!selectedPart()}">Tout</button>` + list.map(p =>
+        `<span class="part-item"><button type="button" data-part="${p.id}" aria-pressed="${p.id === part.selected}" title="${stamp(p.start)} – ${stamp(p.end)}">${esc(p.name)}</button>` +
+        `<button type="button" class="part-edit" data-editpart="${p.id}">Modifier</button></span>`).join('') +
+      '<button type="button" class="add" data-addpart aria-label="Marquer une partie" title="Marquer une partie">+</button>';
+  renderReplay();
+}
+// autre morceau ou autre fichier : on revient à « Tout »
+function resetParts(){ clearTimeout(part.watch); part.selected = null; part.editing = null; part.loop = false; part.replayAt = 0; renderParts(); }
+function openPart(id){
+  const found = partsOf(songId).find(p => p.id === id);
+  part.editing = found ? found.id : 'new';
+  part.selected = null; clearTimeout(part.watch);             // pendant la saisie, la lecture continue librement
+  $('pName').value = found ? found.name : '';
+  $('pStart').value = stamp(found ? found.start : $('trackAudio').currentTime || 0);
+  $('pEnd').value = found ? stamp(found.end) : '';
+  $('pDelete').hidden = !found;
+  $('partNote').textContent = '';
+  renderParts(); renderMarks();
+  $('pName').focus();
+}
+function closePart(){ part.editing = null; renderParts(); renderMarks(); }
+function savePart(){
+  const start = parseStamp($('pStart').value), end = parseStamp($('pEnd').value), length = $('trackAudio').duration;
+  const refuse = message => { $('partNote').textContent = message; };
+  if (start === null) return refuse('Début : écris un temps comme 1:05 ou 1:05,5.');
+  if (end === null) return refuse($('pEnd').value.trim() ? 'Fin : écris un temps comme 1:05 ou 1:05,5.'
+    : 'Indique la fin : écoute, puis clique sur « Ici » au bon moment.');
+  if (Number.isFinite(length) && start >= length) return refuse('Le début dépasse la durée du morceau.');
+  const stop = Number.isFinite(length) ? Math.min(end, length) : end;
+  if (stop <= start) return refuse('La fin doit venir après le début.');
+  const list = partsOf(songId), old = list.find(p => p.id === part.editing);
+  const saved = { id:old ? old.id : `part-${Math.random().toString(36).slice(2, 10)}`,
+    name:$('pName').value.trim() || `Partie ${list.length + (old ? 0 : 1)}`, start, end:stop };
+  partsCache[songId] = tidyParts([...list.filter(p => p !== old), saved]);
+  const kept = saveParts(songId);
+  closePart();
+  if (!kept){ track.note = 'Ce navigateur ne peut pas garder les parties.'; renderTrack(); }
+}
+function deletePart(){
+  if (!ask('Supprimer cette partie ?')) return;
+  partsCache[songId] = partsOf(songId).filter(p => p.id !== part.editing);
+  saveParts(songId); closePart();
+}
+$('partList').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.editpart !== undefined) openPart(b.dataset.editpart);
+  else if (b.dataset.part !== undefined) choosePart(b.dataset.part);
+  else openPart();
+});
+$('partForm').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.here) $(b.dataset.here).value = stamp($('trackAudio').currentTime || 0);
+  else if (b.id === 'pCancel') closePart();
+  else if (b.id === 'pDelete') deletePart();
+});
+$('partForm').addEventListener('submit', e => { e.preventDefault(); savePart(); });
 
 // draft : le morceau en cours de saisie (null hors du formulaire) ; dirty : il a été touché
 let draft = null, dirty = false;
@@ -2132,8 +2387,8 @@ function deleteSong(){
   }
   if (!ask('Supprimer ce morceau, avec sa tablature et son MP3 ?')) return;
   library.added = library.added.filter(s => s.id !== id); saveLibrary();
-  try { localStorage.removeItem(tabKey(id)); localStorage.removeItem(shownKey(id)); } catch(e){}
-  delete sheets[id]; delete tracks[id];
+  try { localStorage.removeItem(tabKey(id)); localStorage.removeItem(shownKey(id)); localStorage.removeItem(partsKey(id)); } catch(e){}
+  delete sheets[id]; delete tracks[id]; delete partsCache[id];
   trackStore('readwrite', store => store.delete(id)).catch(() => {});
   songId = SONGS[0].id; closeForm();
 }
@@ -2261,6 +2516,7 @@ function localData(){
   allSongs().forEach(({ id }) => {
     const sheet = sheetOf(id);
     if (sheet.text){ out[tabKey(id)] = sheet.text; out[shownKey(id)] = sheet.shown ? '1' : '0'; }
+    if (partsOf(id).length) out[partsKey(id)] = JSON.stringify(partsOf(id));
   });
   if (shownIds.size !== BASE_IDS.length || BASE_IDS.some(id => !shownIds.has(id))) out[SHOWN_KEY] = JSON.stringify([...shownIds]);
   if (strumShift) out[SHIFT_KEY] = String(strumShift);
@@ -2295,8 +2551,9 @@ function summary(data){
   const songs = parseLibrary(data.local[LIBRARY_KEY]), n = songs.added.length + Object.keys(songs.edited).length;
   const tabs = Object.keys(data.local).filter(k => k.startsWith(tabKey(''))).length;
   const say = (count, one, many) => `${count} ${count > 1 ? many : one}`;
+  const parts = Object.keys(data.local).filter(k => k.startsWith(partsKey(''))).reduce((total, k) => total + parseParts(data.local[k]).length, 0);
   return `${say(n, 'morceau ajouté ou modifié', 'morceaux ajoutés ou modifiés')}, ${say(tabs, 'tablature', 'tablatures')}, ` +
-    `${Object.keys(data.tracks || {}).length} MP3`;
+    `${Object.keys(data.tracks || {}).length} MP3` + (parts ? `, ${say(parts, 'partie', 'parties')}` : '');
 }
 // reprend les données d'une sauvegarde ; overwrite : elles remplacent celles du même morceau, sinon elles complètent
 function applyData(data, overwrite){
@@ -2310,6 +2567,8 @@ function applyData(data, overwrite){
   Object.values(songs.edited).forEach(song => { if (overwrite || !library.edited[song.id]) library.edited[song.id] = song; });
   saveLibrary();
   allSongs().forEach(({ id }) => {
+    const parts = parseParts(value(partsKey(id)));
+    if (parts.length && (overwrite || !partsOf(id).length)){ partsCache[id] = parts; saveParts(id); }
     const tab = value(tabKey(id));
     if (!tab || (!overwrite && sheetOf(id).text)) return;
     sheets[id] = { text:tab, shown:value(shownKey(id)) === '1' };
